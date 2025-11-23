@@ -30,7 +30,7 @@ export const authenticateToken = (req, res, next) => {
     } catch (error) {
         console.error("Auth middleware error:", error);
         res.status(500).json({
-            success: false,
+            sucess: false,
             message: "Internal server error"
         });
         
