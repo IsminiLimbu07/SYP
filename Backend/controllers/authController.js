@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { sql } from '../config/db.js';
 
@@ -371,4 +371,3 @@ export const changePassword = async (req, res) => {
         });
     }
 };
- 
