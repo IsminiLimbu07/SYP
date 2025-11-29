@@ -1,4 +1,6 @@
-// frontend/src/screens/LoginScreen.jsx
+// Mobile/AshaSetu/screens/LoginScreen.jsx
+// FIXED: No white space when scrolling + Better keyboard handling
+
 import React, { useState, useContext } from 'react';
 import {
   View,
@@ -10,16 +12,21 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Image
+  Image,
+  ScrollView,
+  Dimensions
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import { loginUser } from '../api/auth';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const LoginScreen = ({ navigation }) => {
   const { login } = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -47,90 +54,110 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Top Section with Logo - Beige Background */}
-      <View style={styles.topSection}>
-        {/* Logo Container */}
-        <View style={styles.logoContainer}>
-          {/* Logo Image */}
-          <Image
-            source={require('../assets/images/Logo.png')}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        {/* Top Section with Logo */}
+        <View style={styles.topSection}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../assets/images/Logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
         </View>
-      </View>
 
-      {/* Bottom Section with Form - Gradient Background */}
-      <View style={styles.bottomSection}>
-        {/* Welcome Card with Embedded Form */}
-        <View style={styles.welcomeCard}>
-          <Text style={styles.welcomeTitle}>WELCOME</Text>
-          <Text style={styles.welcomeSubtitle}>Hello, Login Back To Your Account</Text>
-          
-          {/* Email Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                placeholder="placeholder"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <Text style={styles.inputIcon}>✉</Text>
+        {/* Bottom Section with Form */}
+        <View style={styles.bottomSection}>
+          {/* Welcome Card */}
+          <View style={styles.welcomeCard}>
+            <Text style={styles.welcomeTitle}>WELCOME</Text>
+            <Text style={styles.welcomeSubtitle}>Hello, Login Back To Your Account</Text>
+            
+            {/* Email Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your email"
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect={false}
+                />
+                <Text style={styles.inputIcon}>✉</Text>
+              </View>
             </View>
+
+            {/* Password Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your password"
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoComplete="password"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity 
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                >
+                  <Text style={styles.inputIcon}>
+                    {showPassword ? '👁' : '🔒'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.forgotPassword}>
+              <Text style={styles.forgotPasswordText}>Forget Password?</Text>
+            </TouchableOpacity>
+
+            {/* Login Button */}
+            <TouchableOpacity
+              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Text style={styles.loginButtonText}>Login</Text>
+                  <Text style={styles.loginArrow}>→</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
 
-          {/* Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                placeholder="placeholder"
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-              <Text style={styles.inputIcon}>👁</Text>
-            </View>
+          {/* Register Link */}
+          <View style={styles.registerSection}>
+            <Text style={styles.registerText}>Don't have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+              <Text style={styles.registerLink}>SignUp</Text>
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forget Password?</Text>
-          </TouchableOpacity>
-
-          {/* Login Button */}
-          <TouchableOpacity
-            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Text style={styles.loginButtonText}>Login</Text>
-                <Text style={styles.loginArrow}>→</Text>
-              </>
-            )}
-          </TouchableOpacity>
         </View>
-
-        {/* Register Link */}
-        <View style={styles.registerSection}>
-          <Text style={styles.registerText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.registerLink}>SignUp</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -139,39 +166,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5E6D3'
   },
+  scrollContent: {
+    flexGrow: 1,
+    minHeight: SCREEN_HEIGHT, // Prevents white space
+  },
   topSection: {
-    flex: 0.4,
+    height: 280,
     backgroundColor: '#F5E6D3',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 40
+    paddingTop: 40,
   },
   logoContainer: {
     alignItems: 'center'
   },
   logoImage: {
-    width: 600,
-    height: 500
+    width: 380,
+    height: 410,
   },
   bottomSection: {
-    flex: 0.8,
+    flex: 1,
     backgroundColor: '#E8C5C5',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     paddingTop: 30,
-
+    paddingBottom: 30,
   },
   welcomeCard: {
     backgroundColor: '#8B0000',
     marginHorizontal: 20,
-    marginTop: -5,
+    marginTop: 30,
     paddingHorizontal: 25,
     paddingTop: 30,
     paddingBottom: 25,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -218,6 +246,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: 'rgba(255, 255, 255, 0.6)',
     marginLeft: 8
+  },
+  eyeButton: {
+    padding: 5,
   },
   forgotPassword: {
     alignSelf: 'flex-end',

@@ -1,5 +1,7 @@
-// frontend/src/screens/RegisterScreen.jsx
-import React, { useState, useContext } from 'react';
+// Mobile/AshaSetu/screens/RegisterScreen.jsx
+// FIXED: No more ref.measureLayout errors
+
+import React, { useState, useContext, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,13 +11,17 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  SafeAreaView
+  SafeAreaView,
+  Platform,
+  Keyboard
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import { registerUser } from '../api/auth';
 
 const RegisterScreen = ({ navigation }) => {
   const { login } = useContext(AuthContext);
+  const scrollViewRef = useRef(null);
+  
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -24,10 +30,29 @@ const RegisterScreen = ({ navigation }) => {
     password: ''
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
 
   const handleRegister = async () => {
     if (!formData.full_name || !formData.email || !formData.phone_number || !formData.password) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert('Required Fields Missing', 'Please fill in all required fields to continue.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address.');
+      return;
+    }
+
+    const phoneRegex = /^98\d{8}$/;
+    if (!phoneRegex.test(formData.phone_number)) {
+      Alert.alert('Invalid Phone Number', 'Phone number must start with 98 and be 10 digits long.');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      Alert.alert('Weak Password', 'Password must be at least 6 characters long.');
       return;
     }
 
@@ -38,10 +63,10 @@ const RegisterScreen = ({ navigation }) => {
 
       if (response.success) {
         await login(response.token, response.user);
-        Alert.alert('Success', 'Registration successful!');
+        Alert.alert('Success', 'Your account has been created successfully!');
       }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Registration failed');
+      Alert.alert('Registration Failed', error.message || 'Unable to create account. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -51,137 +76,210 @@ const RegisterScreen = ({ navigation }) => {
     setFormData({ ...formData, [field]: value });
   };
 
+  // Simple scroll function with fixed positions
+  const scrollToField = (scrollY) => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({
+        y: scrollY,
+        animated: true,
+      });
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Header Section */}
-        <View style={styles.headerSection}>
-          <View style={styles.iconContainer}>
-            <Text style={styles.iconText}>❤️</Text>
-          </View>
-          <Text style={styles.mainTitle}>Join AashaSetu</Text>
-          <Text style={styles.subtitle}>Be a lifesaver today</Text>
+        <View style={styles.header}>
+          <View style={styles.headerDecoration} />
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>Join AshaSetu to help save lives</Text>
         </View>
 
-        {/* Form Card */}
-        <View style={styles.formCard}>
+        {/* Registration Form */}
+        <View style={styles.formContainer}>
           {/* Full Name */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Full Name</Text>
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>👤</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Full Name *</Text>
+            <View style={[
+              styles.inputWrapper,
+              focusedField === 'full_name' && styles.inputWrapperFocused
+            ]}>
               <TextInput
                 style={styles.input}
                 placeholder="Enter your full name"
-                placeholderTextColor="rgba(139, 0, 0, 0.4)"
+                placeholderTextColor="#999"
                 value={formData.full_name}
                 onChangeText={(value) => updateField('full_name', value)}
+                onFocus={() => {
+                  setFocusedField('full_name');
+                  scrollToField(0);
+                }}
+                onBlur={() => setFocusedField(null)}
+                autoComplete="name"
+                autoCorrect={false}
+                returnKeyType="next"
               />
             </View>
           </View>
 
           {/* Email */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email Address</Text>
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>✉️</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email Address *</Text>
+            <View style={[
+              styles.inputWrapper,
+              focusedField === 'email' && styles.inputWrapperFocused
+            ]}>
               <TextInput
                 style={styles.input}
                 placeholder="your.email@example.com"
-                placeholderTextColor="rgba(139, 0, 0, 0.4)"
+                placeholderTextColor="#999"
                 value={formData.email}
                 onChangeText={(value) => updateField('email', value)}
+                onFocus={() => {
+                  setFocusedField('email');
+                  scrollToField(80);
+                }}
+                onBlur={() => setFocusedField(null)}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect={false}
+                returnKeyType="next"
               />
             </View>
           </View>
 
-          {/* District */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>District</Text>
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>📍</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Your district"
-                placeholderTextColor="rgba(139, 0, 0, 0.4)"
-                value={formData.district}
-                onChangeText={(value) => updateField('district', value)}
-              />
-            </View>
-          </View>
-
-          {/* Phone */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number</Text>
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>📱</Text>
+          {/* Phone Number */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Phone Number *</Text>
+            <View style={[
+              styles.inputWrapper,
+              focusedField === 'phone' && styles.inputWrapperFocused
+            ]}>
               <TextInput
                 style={styles.input}
                 placeholder="98XXXXXXXX"
-                placeholderTextColor="rgba(139, 0, 0, 0.4)"
+                placeholderTextColor="#999"
                 value={formData.phone_number}
                 onChangeText={(value) => updateField('phone_number', value)}
+                onFocus={() => {
+                  setFocusedField('phone');
+                  scrollToField(180);
+                }}
+                onBlur={() => setFocusedField(null)}
                 keyboardType="phone-pad"
+                autoComplete="tel"
+                maxLength={10}
+                returnKeyType="next"
+              />
+            </View>
+            <Text style={styles.hint}>Format: 98XXXXXXXX (10 digits)</Text>
+          </View>
+
+          {/* District */}
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>District (Optional)</Text>
+            <View style={[
+              styles.inputWrapper,
+              focusedField === 'district' && styles.inputWrapperFocused
+            ]}>
+              <TextInput
+                style={styles.input}
+                placeholder="Your district"
+                placeholderTextColor="#999"
+                value={formData.district}
+                onChangeText={(value) => updateField('district', value)}
+                onFocus={() => {
+                  setFocusedField('district');
+                  scrollToField(300);
+                }}
+                onBlur={() => setFocusedField(null)}
+                autoCorrect={false}
+                returnKeyType="next"
               />
             </View>
           </View>
 
           {/* Password */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>🔒</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Password *</Text>
+            <View style={[
+              styles.inputWrapper,
+              focusedField === 'password' && styles.inputWrapperFocused
+            ]}>
               <TextInput
-                style={styles.input}
+                style={[styles.input, styles.passwordInput]}
                 placeholder="Minimum 6 characters"
-                placeholderTextColor="rgba(139, 0, 0, 0.4)"
+                placeholderTextColor="#999"
                 value={formData.password}
                 onChangeText={(value) => updateField('password', value)}
-                secureTextEntry
+                onFocus={() => {
+                  setFocusedField('password');
+                  scrollToField(400);
+                }}
+                onBlur={() => setFocusedField(null)}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="password"
+                autoCorrect={false}
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
               />
+              <TouchableOpacity 
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.eyeIcon}>
+                  {showPassword ? '○' : '●'}
+                </Text>
+              </TouchableOpacity>
             </View>
+            <Text style={styles.hint}>Must be at least 6 characters</Text>
           </View>
 
-          {/* Info Box */}
-          <View style={styles.infoBox}>
-            <Text style={styles.infoIcon}>ℹ️</Text>
-            <Text style={styles.infoText}>
-              By signing up, you agree to help save lives and be part of our community.
+          {/* Terms Notice */}
+          <View style={styles.termsContainer}>
+            <View style={styles.termsDivider} />
+            <Text style={styles.termsText}>
+              By creating an account, you agree to our Terms of Service and Privacy Policy
             </Text>
           </View>
 
-          {/* Create Account Button */}
+          {/* Register Button */}
           <TouchableOpacity
-            style={[styles.createButton, loading && styles.createButtonDisabled]}
+            style={[styles.registerButton, loading && styles.registerButtonDisabled]}
             onPress={handleRegister}
             disabled={loading}
+            activeOpacity={0.8}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <>
-                <Text style={styles.createButtonText}>Create Account</Text>
-                <Text style={styles.buttonArrow}>→</Text>
-              </>
+              <Text style={styles.registerButtonText}>Create Account</Text>
             )}
           </TouchableOpacity>
+
+          {/* Login Link */}
+          <View style={styles.loginContainer}>
+            <Text style={styles.loginText}>Already have an account? </Text>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('Login')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.loginLink}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Sign In Link */}
-        <View style={styles.signInContainer}>
-          <Text style={styles.signInText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.signInLink}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Bottom Spacing */}
+        {/* Extra space at bottom for keyboard */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
     </SafeAreaView>
@@ -191,153 +289,172 @@ const RegisterScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5E6D3'
+    backgroundColor: '#F8F9FA'
   },
   scrollView: {
     flex: 1
   },
   scrollContent: {
-    paddingHorizontal: 25
+    flexGrow: 1,
+    paddingBottom: 50,
   },
-  headerSection: {
-    alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 30
-  },
-  iconContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+  header: {
     backgroundColor: '#8B0000',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
+    paddingTop: 60,
+    paddingBottom: 40,
+    paddingHorizontal: 30,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  iconText: {
-    fontSize: 35
+  headerDecoration: {
+    position: 'absolute',
+    top: 20,
+    right: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
-  mainTitle: {
+  title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#8B0000',
-    marginBottom: 5,
-    letterSpacing: 1
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    letterSpacing: 0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: '#A0522D',
-    fontStyle: 'italic'
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontWeight: '400',
+    letterSpacing: 0.3,
   },
-  formCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 6,
-    marginBottom: 20
+  formContainer: {
+    paddingHorizontal: 30,
+    paddingTop: 30,
   },
-  inputGroup: {
-    marginBottom: 20
+  inputContainer: {
+    marginBottom: 24,
   },
   label: {
     fontSize: 14,
-    color: '#8B0000',
+    fontWeight: '600',
+    color: '#2C3E50',
     marginBottom: 8,
-    fontWeight: '600'
+    letterSpacing: 0.3,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF5F5',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#F0D0D0',
+    borderColor: '#E1E8ED',
     borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 4
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  inputIcon: {
-    fontSize: 20,
-    marginRight: 10
+  inputWrapperFocused: {
+    borderColor: '#8B0000',
+    shadowColor: '#8B0000',
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 4,
   },
   input: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     fontSize: 15,
-    color: '#333'
+    color: '#2C3E50',
+    fontWeight: '400',
   },
-  infoBox: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF5E6',
-    borderLeftWidth: 4,
-    borderLeftColor: '#D4A574',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
-    alignItems: 'center'
+  passwordInput: {
+    paddingRight: 40,
   },
-  infoIcon: {
-    fontSize: 18,
-    marginRight: 8
+  eyeButton: {
+    padding: 8,
+    position: 'absolute',
+    right: 12,
   },
-  infoText: {
-    flex: 1,
+  eyeIcon: {
+    fontSize: 20,
+    color: '#8B0000',
+    fontWeight: '600',
+  },
+  hint: {
     fontSize: 12,
-    color: '#8B6F47',
-    lineHeight: 18
+    color: '#7F8C8D',
+    marginTop: 6,
+    fontStyle: 'italic',
   },
-  createButton: {
+  termsContainer: {
+    marginTop: 10,
+    marginBottom: 30,
+    alignItems: 'center',
+  },
+  termsDivider: {
+    width: 60,
+    height: 2,
+    backgroundColor: '#E1E8ED',
+    marginBottom: 16,
+  },
+  termsText: {
+    fontSize: 12,
+    color: '#7F8C8D',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 20,
+  },
+  registerButton: {
     backgroundColor: '#8B0000',
-    paddingVertical: 15,
+    paddingVertical: 16,
     borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+    minHeight: 54,
+  },
+  registerButtonDisabled: {
+    backgroundColor: '#B8B8B8',
+    shadowOpacity: 0.1,
+  },
+  registerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#8B0000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5
+    marginTop: 24,
+    marginBottom: 20,
   },
-  createButtonDisabled: {
-    backgroundColor: '#B8B8B8'
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginRight: 8
-  },
-  buttonArrow: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold'
-  },
-  signInContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 15,
-    marginBottom: 10
-  },
-  signInText: {
+  loginText: {
     fontSize: 15,
-    color: '#666'
+    color: '#7F8C8D',
+    fontWeight: '400',
   },
-  signInLink: {
+  loginLink: {
     fontSize: 15,
     color: '#8B0000',
-    fontWeight: 'bold',
-    textDecorationLine: 'underline'
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   bottomSpacing: {
-    height: 20
+    height: 250,
   }
 });
 

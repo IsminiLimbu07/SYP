@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    paddingTop: 10
+    paddingTop: 0
   },
   header: {
     backgroundColor: '#8B0000',
@@ -195,9 +195,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    paddingVertical: 30,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
     marginBottom: 20
   },
   headerTop: {
