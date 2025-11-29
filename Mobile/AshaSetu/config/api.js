@@ -1,9 +1,7 @@
-const YOUR_LAPTOP_IP = '192.168.1.6'; // 👈 CHANGE THIS!
+// ✅ USE NGROK URL
+const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev '; // 👈 PASTE YOUR NGROK URL
 
-const PORT = 9000;
-
-// Construct the base URL
-const API_BASE_URL = `http://192.168.1.6:9000/api`;
+const API_BASE_URL = `${NGROK_URL}/api`;
 
 // API Configuration
 export const apiConfig = {
@@ -22,13 +20,12 @@ export const apiConfig = {
 // Helper function to make API requests
 export const makeRequest = async (url, options = {}) => {
   try {
-    console.log('🔄 API Request:', {
+    console.log('📄 API Request:', {
       url,
       method: options.method || 'GET',
       timestamp: new Date().toISOString()
     });
 
-    // Create a timeout promise
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -61,13 +58,12 @@ export const makeRequest = async (url, options = {}) => {
     console.error('🚨 Request failed:', errorMsg);
     console.error('Full error:', error);
     
-    // More helpful error messages
     if (errorMsg.includes('Network request failed')) {
       throw new Error(
-        'Cannot reach server. Check:\n' +
-        '1. Phone & laptop on same WiFi\n' +
-        '2. Backend is running\n' +
-        `3. Can access http://${YOUR_LAPTOP_IP}:${PORT}/ in phone browser`
+        'Cannot reach server. Make sure:\n' +
+        '1. Backend is running\n' +
+        '2. Ngrok is running\n' +
+        '3. Ngrok URL is correct in api.js'
       );
     }
     
@@ -75,12 +71,11 @@ export const makeRequest = async (url, options = {}) => {
   }
 };
 
-// Connection test function (useful for debugging)
+// Connection test function
 export const testConnection = async () => {
   try {
-    const response = await fetch(`http://${YOUR_LAPTOP_IP}:${PORT}/`, {
+    const response = await fetch(`${NGROK_URL}/`, {
       method: 'GET',
-      timeout: 5000,
     });
     
     const data = await response.json();
@@ -95,12 +90,6 @@ export const testConnection = async () => {
       success: false,
       message: 'Connection failed',
       error: error.message,
-      instructions: [
-        'Make sure backend is running',
-        'Check if phone and laptop are on same WiFi',
-        `Try accessing http://${YOUR_LAPTOP_IP}:${PORT}/ in phone browser`,
-        'Check Windows Firewall settings',
-      ],
     };
   }
 };
