@@ -1,31 +1,11 @@
-// API Configuration with fallback support
-// This allows the app to work from different networks and locations
+const YOUR_LAPTOP_IP = '192.168.1.6'; // 👈 CHANGE THIS!
 
-const API_URLS = {
-  // Primary: Your home/office network
-  primary: 'http://192.168.56.1:9000/api',
-  
-  // Fallback options (for different networks)
-  fallbacks: [
-    'http://192.168.1.1:9000/api',      // Common home router
-    'http://10.0.0.1:9000/api',         // Some networks
-    'http://192.168.0.1:9000/api',      // Other networks
-    'http://localhost:9000/api',        // Local machine (web only)
-  ],
-  
-  // Production (when deployed to real server)
-  production: 'https://api.ashasetu.com/api', // Replace with your actual server
-};
+const PORT = 9000;
 
-// Try to detect which network is available
-let API_BASE_URL = API_URLS.primary;
+// Construct the base URL
+const API_BASE_URL = `http://192.168.1.6:9000/api`;
 
-// For production builds, use the production URL
-// For development, use primary IP (your machine)
-if (process.env.NODE_ENV === 'production') {
-  API_BASE_URL = API_URLS.production;
-}
-
+// API Configuration
 export const apiConfig = {
   BASE_URL: API_BASE_URL,
   ENDPOINTS: {
@@ -39,7 +19,7 @@ export const apiConfig = {
   },
 };
 
-// Helper function to make API requests with retry logic
+// Helper function to make API requests
 export const makeRequest = async (url, options = {}) => {
   try {
     console.log('🔄 API Request:', {
@@ -48,14 +28,20 @@ export const makeRequest = async (url, options = {}) => {
       timestamp: new Date().toISOString()
     });
 
+    // Create a timeout promise
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
       },
-      timeout: 10000, // 10 second timeout
+      signal: controller.signal,
       ...options,
     });
+
+    clearTimeout(timeoutId);
 
     console.log('📊 API Response Status:', response.status);
 
@@ -74,6 +60,47 @@ export const makeRequest = async (url, options = {}) => {
     const errorMsg = error.message || 'Network error occurred';
     console.error('🚨 Request failed:', errorMsg);
     console.error('Full error:', error);
+    
+    // More helpful error messages
+    if (errorMsg.includes('Network request failed')) {
+      throw new Error(
+        'Cannot reach server. Check:\n' +
+        '1. Phone & laptop on same WiFi\n' +
+        '2. Backend is running\n' +
+        `3. Can access http://${YOUR_LAPTOP_IP}:${PORT}/ in phone browser`
+      );
+    }
+    
     throw new Error(errorMsg);
+  }
+};
+
+// Connection test function (useful for debugging)
+export const testConnection = async () => {
+  try {
+    const response = await fetch(`http://${YOUR_LAPTOP_IP}:${PORT}/`, {
+      method: 'GET',
+      timeout: 5000,
+    });
+    
+    const data = await response.json();
+    
+    return {
+      success: true,
+      message: 'Connected successfully!',
+      serverMessage: data.message,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: 'Connection failed',
+      error: error.message,
+      instructions: [
+        'Make sure backend is running',
+        'Check if phone and laptop are on same WiFi',
+        `Try accessing http://${YOUR_LAPTOP_IP}:${PORT}/ in phone browser`,
+        'Check Windows Firewall settings',
+      ],
+    };
   }
 };

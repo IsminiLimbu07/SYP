@@ -11,7 +11,6 @@ import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
-import TestLoginScreen from '../screens/TestLoginScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -70,11 +69,6 @@ const AppNavigator = () => {
       ) : (
         // Guest Stack
         <>
-          <Stack.Screen 
-            name="TestLogin" 
-            component={TestLoginScreen}
-            options={{ headerShown: false }}
-          />
           <Stack.Screen 
             name="Login" 
             component={LoginScreen}
