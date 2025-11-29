@@ -84,9 +84,10 @@ app.use("/api/auth", authRoutes);
 
 // Start server
 initDB().then(() => {
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on port ${PORT}`);
-        console.log(`📍 API Base URL: http://localhost:${PORT}`);
+        console.log(`📍 API Base URL: http://0.0.0.0:${PORT}`);
         console.log(`📝 Health check: http://localhost:${PORT}/`);
+        console.log(`📲 From phone: http://192.168.56.1:${PORT}`);
     });
 });
