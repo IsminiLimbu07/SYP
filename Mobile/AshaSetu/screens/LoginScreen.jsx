@@ -1,5 +1,5 @@
 // Mobile/AshaSetu/screens/LoginScreen.jsx
-// FIXED: No white space when scrolling + Better keyboard handling
+// FIXED: Status bar now visible + No white space when scrolling + Better keyboard handling
 
 import React, { useState, useContext } from 'react';
 import {
@@ -14,7 +14,8 @@ import {
   Platform,
   Image,
   ScrollView,
-  Dimensions
+  Dimensions,
+  StatusBar
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import { loginUser } from '../api/auth';
@@ -36,11 +37,11 @@ const LoginScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      console.log('🔐 Starting login...', { email });
+      console.log('🔍 Starting login...', { email });
       const response = await loginUser({ email, password });
       console.log('✅ Login response:', response);
       if (response.success) {
-        console.log('🔄 Saving to AuthContext...');
+        console.log('💾 Saving to AuthContext...');
         await login(response.token, response.user);
         console.log('🎉 Login successful!');
       }
@@ -58,6 +59,8 @@ const LoginScreen = ({ navigation }) => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <StatusBar barStyle="dark-content" backgroundColor="#C19A6B" translucent={false} />
+      
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -72,6 +75,7 @@ const LoginScreen = ({ navigation }) => {
               style={styles.logoImage}
               resizeMode="contain"
             />
+            
           </View>
         </View>
 
@@ -164,38 +168,38 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5E6D3'
+    backgroundColor: '#C19A6B'
   },
   scrollContent: {
     flexGrow: 1,
-    minHeight: SCREEN_HEIGHT, // Prevents white space
+    minHeight: SCREEN_HEIGHT,
   },
   topSection: {
     height: 280,
-    backgroundColor: '#F5E6D3',
+    backgroundColor: '#C19A6B',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 40,
+    paddingTop: 50,
   },
   logoContainer: {
     alignItems: 'center'
   },
   logoImage: {
-    width: 400,
-    height: 440,
+    width: 420,
+    height: 500,
   },
   bottomSection: {
     flex: 1,
-    backgroundColor: '#E8C5C5',
+    backgroundColor: '#d8dce0ff',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    paddingTop: 30,
+    paddingTop: 10,
     paddingBottom: 30,
   },
   welcomeCard: {
     backgroundColor: '#8B0000',
     marginHorizontal: 20,
-    marginTop: 30,
+    marginTop: 40,
     paddingHorizontal: 25,
     paddingTop: 30,
     paddingBottom: 25,
