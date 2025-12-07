@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { sql } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
+import bloodRoutes from './routes/bloodRoutes.js';
 
 dotenv.config();
 
@@ -61,6 +62,53 @@ async function initDB() {
             )
         `;
 
+        // Blood Requests table
+        await sql`
+            CREATE TABLE IF NOT EXISTS blood_requests (
+                request_id SERIAL PRIMARY KEY,
+                requester_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+                blood_group VARCHAR(5) NOT NULL CHECK (blood_group IN ('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-')),
+                units_needed INTEGER NOT NULL CHECK (units_needed >= 1 AND units_needed <= 20),
+                urgency_level VARCHAR(20) NOT NULL CHECK (urgency_level IN ('critical', 'urgent', 'normal')),
+                patient_name VARCHAR(255) NOT NULL,
+                hospital_name VARCHAR(255) NOT NULL,
+                hospital_address TEXT,
+                hospital_city VARCHAR(100),
+                hospital_contact VARCHAR(20),
+                needed_by_date DATE NOT NULL,
+                description TEXT,
+                status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'fulfilled', 'cancelled')),
+                location_lat DECIMAL(10, 8),
+                location_lng DECIMAL(11, 8),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `;
+
+        // Donation Responses table
+        await sql`
+            CREATE TABLE IF NOT EXISTS donation_responses (
+                donation_id SERIAL PRIMARY KEY,
+                request_id INTEGER REFERENCES blood_requests(request_id) ON DELETE CASCADE,
+                donor_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+                message TEXT,
+                status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled')),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(request_id, donor_id)
+            )
+        `;
+
+        // Create indexes
+        await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_requester ON blood_requests(requester_id)`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_blood_group ON blood_requests(blood_group)`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_urgency ON blood_requests(urgency_level)`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_status ON blood_requests(status)`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_city ON blood_requests(hospital_city)`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_donation_responses_request ON donation_responses(request_id)`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_donation_responses_donor ON donation_responses(donor_id)`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_donation_responses_status ON donation_responses(status)`;
+
         console.log("✅ Database initialized successfully.");
     } catch (error) {
         console.error("❌ Error initializing database:", error);
@@ -75,12 +123,14 @@ app.get("/", (req, res) => {
         version: "1.0.0",
         endpoints: {
             auth: "/api/auth",
+            blood: "/api/blood",
             health: "/"
         }
     });
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/blood", bloodRoutes);
 
 // Start server
 initDB().then(() => {
