@@ -152,7 +152,10 @@ const HomeScreen = ({ navigation }) => {
 
         {/* Action Grid */}
         <View style={styles.actionGrid}>
-          <TouchableOpacity style={styles.actionCard}>
+          <TouchableOpacity 
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('FindDonor')}
+          >
             <View style={styles.actionIconContainer}>
               <MaterialCommunityIcons name="account-group" size={28} color="#8B0000" />
             </View>
