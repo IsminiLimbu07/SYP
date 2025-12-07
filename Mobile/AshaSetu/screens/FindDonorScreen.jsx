@@ -53,10 +53,6 @@ export default function FindDonorsScreen() {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity>
-          <Icon name="arrow-back" size={26} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Find Donors</Text>
       </View>
 
       {/* Search Bar */}
