@@ -11,6 +11,8 @@ import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
+import FindDonorsScreen from '../screens/FindDonorScreen';
+
 
 const Stack = createNativeStackNavigator();
 
@@ -60,6 +62,17 @@ const AppNavigator = () => {
             component={ChangePasswordScreen}
             options={{ 
               title: 'Change Password',
+              headerStyle: { backgroundColor: '#8B0000' },
+              headerTintColor: '#fff',
+              headerTitleStyle: { fontWeight: 'bold' }
+            }}
+          />
+        
+          <Stack.Screen 
+            name="FindDonor" 
+            component={FindDonorsScreen}
+            options={{ 
+              title: 'Find Donors',
               headerStyle: { backgroundColor: '#8B0000' },
               headerTintColor: '#fff',
               headerTitleStyle: { fontWeight: 'bold' }
