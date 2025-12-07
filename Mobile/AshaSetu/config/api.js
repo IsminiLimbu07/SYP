@@ -1,5 +1,5 @@
 // ✅ USE NGROK URL
-const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev'; // 👈 PASTE YOUR NGROK URL
+const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev' ; // 👈 PASTE YOUR NGROK URL
 
 const API_BASE_URL = `${NGROK_URL}/api`;
 
