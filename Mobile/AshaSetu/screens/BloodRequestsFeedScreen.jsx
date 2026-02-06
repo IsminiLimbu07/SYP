@@ -84,11 +84,11 @@ export default function BloodRequestsFeedScreen({ navigation }) {
   const getUrgencyColor = (urgency) => {
     switch (urgency) {
       case 'critical':
-        return '#FF1744';
+        return '#b90707';
       case 'urgent':
-        return '#FF9800';
+        return '#b76e00';
       case 'normal':
-        return '#4CAF50';
+        return '#2E7D32';
       default:
         return '#999';
     }
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   createRequestBtn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#2E7D32',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

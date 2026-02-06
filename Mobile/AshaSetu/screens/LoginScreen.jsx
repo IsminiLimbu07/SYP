@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     minHeight: SCREEN_HEIGHT,
   },
   topSection: {
-    height: 280,
+    height: 320,
     backgroundColor: '#C19A6B',
     justifyContent: 'center',
     alignItems: 'center',
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     alignItems: 'center'
   },
   logoImage: {
-    width: 420,
+    width: 380,
     height: 500,
   },
   bottomSection: {
