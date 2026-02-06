@@ -16,6 +16,7 @@ import BloodRequestScreen from '../screens/BloodRequestScreen';
 import BloodRequestsFeedScreen from '../screens/BloodRequestsFeedScreen';
 import AmbulanceScreen from '../screens/AmbulanceScreen';
 import FirstAidScreen from '../screens/FirstAidScreen';
+import DonationScreen from '../screens/DonationScreen';
 
 
 const Stack = createNativeStackNavigator();
@@ -97,6 +98,16 @@ const AppNavigator = () => {
             component={FirstAidScreen}
             options={{
               title: 'First Aid',
+              headerStyle: { backgroundColor: '#8B0000' },
+              headerTintColor: '#fff',
+              headerTitleStyle: { fontWeight: 'bold' }
+            }}
+          />
+          <Stack.Screen
+            name="Donation"
+            component={DonationScreen}
+            options={{
+              title: 'Donate Blood',
               headerStyle: { backgroundColor: '#8B0000' },
               headerTintColor: '#fff',
               headerTitleStyle: { fontWeight: 'bold' }

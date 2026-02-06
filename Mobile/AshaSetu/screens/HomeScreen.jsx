@@ -292,7 +292,10 @@ const HomeScreen = ({ navigation }) => {
         <TouchableOpacity style={styles.navItem}>
           <MaterialCommunityIcons name="home-outline" size={20} color="#8A8A8A" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Donation')}
+        >
           <MaterialCommunityIcons name="hand-coin" size={20} color="#8A8A8A" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem}>
