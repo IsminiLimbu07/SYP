@@ -217,18 +217,12 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.actionLabel}>Blood Request</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionCard}>
-            <View style={styles.actionIconContainer}>
-              <FontAwesome name="ambulance" size={26} color="#666" />
-            </View>
-            <Text style={styles.actionLabel}>Ambulance</Text>
-          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionCard}
             onPress={() => navigation.navigate('Ambulance')}
           >
             <View style={styles.actionIconContainer}>
-              <FontAwesome name="ambulance" size={26} color="#666" />
+              <FontAwesome name="ambulance" size={26} color="#8B0000" />
             </View>
             <Text style={styles.actionLabel}>Ambulance</Text>
           </TouchableOpacity>
