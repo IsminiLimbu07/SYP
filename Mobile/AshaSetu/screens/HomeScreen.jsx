@@ -227,7 +227,10 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.actionLabel}>Ambulance</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionCard}>
+          <TouchableOpacity 
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('FirstAid')}
+          >
             <View style={styles.actionIconContainer}>
               <FontAwesome5 name="first-aid" size={24} color="#DC143C" />
             </View>
