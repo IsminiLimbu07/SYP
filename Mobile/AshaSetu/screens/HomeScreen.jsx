@@ -1,5 +1,5 @@
 // frontend/src/screens/HomeScreen.jsx
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,17 @@ import {
   ScrollView,
   SafeAreaView,
   Image,
-  FlatList
+  FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, FontAwesome } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
+import { apiConfig } from '../config/api';
 
 const HomeScreen = ({ navigation }) => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
+  const [bloodRequests, setBloodRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const quickActions = [
     {
@@ -70,6 +74,46 @@ const HomeScreen = ({ navigation }) => {
     navigation.navigate('Profile');
   };
 
+  useEffect(() => {
+    // Fetch initially and whenever the screen gains focus so new requests appear
+    fetchBloodRequests();
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchBloodRequests();
+    });
+    return unsubscribe;
+  }, [navigation, token]);
+
+  const fetchBloodRequests = async () => {
+    try {
+      setLoading(true);
+      const url = `${apiConfig.BASE_URL}/blood/requests`;
+      console.log('Fetching blood requests from:', url);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      console.log('Blood requests response:', data);
+
+      if (response.ok && data.success) {
+        // Only show strictly critical requests on Home emergency card
+        const criticalRequests = data.data.filter(req => req.urgency_level === 'critical');
+        setBloodRequests(criticalRequests);
+      } else {
+        console.log('Failed to fetch blood requests:', data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching blood requests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView 
@@ -90,65 +134,66 @@ const HomeScreen = ({ navigation }) => {
           >
             <View style={styles.avatarSmall}>
               <Text style={styles.avatarTextSmall}>
-                {user?.full_name?.charAt(0).toUpperCase() || 'U'}
+                {user?.full_name?.charAt(0)?.toUpperCase() || 'U'}
               </Text>
             </View>
           </TouchableOpacity>
         </View>
-
-        {/* Quick Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>0</Text>
-            <Text style={styles.statLabel}>Lives Saved</Text>
+        {loading ? (
+          <View style={[styles.emergencyCard, { justifyContent: 'center', alignItems: 'center' }]}>
+            <ActivityIndicator size="large" color="#8B0000" />
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>0</Text>
-            <Text style={styles.statLabel}>Blood Units</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>0</Text>
-            <Text style={styles.statLabel}>Requests Help</Text>
-          </View>
-        </View>
-
-        {/* Emergency Blood Request Card */}
-        <View style={styles.emergencyCard}>
-          <View style={styles.emergencyHeader}>
-            <Text style={styles.emergencyTitle}>Emergency Blood Requests</Text>
-            <TouchableOpacity style={styles.viewAllButton}>
-              <View style={styles.eyeIcon}>
-                <View style={styles.eyeOuter} />
-                <View style={styles.eyeInner} />
+        ) : bloodRequests.length > 0 ? (
+          bloodRequests.map((request, index) => (
+            <View key={request.request_id || index} style={styles.emergencyCard}>
+              <View style={styles.emergencyHeader}>
+                <Text style={styles.emergencyTitle}>Emergency Blood Request</Text>
+                <TouchableOpacity style={styles.viewAllButton}>
+                  <View style={styles.eyeIcon}>
+                    <View style={styles.eyeOuter} />
+                    <View style={styles.eyeInner} />
+                  </View>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          </View>
 
-          <View style={styles.requestDetails}>
-            <View style={styles.detailRow}>
-              <View style={styles.userIcon}>
-                <FontAwesome name="user" size={18} color="#fff" />
+              <View style={styles.requestDetails}>
+                <View style={styles.detailRow}>
+                  <View style={styles.userIcon}>
+                    <FontAwesome name="user" size={18} color="#fff" />
+                  </View>
+                  <Text style={styles.detailText}>{request.patient_name}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <View style={styles.locationIcon}>
+                    <MaterialCommunityIcons name="map-marker" size={18} color="#fff" />
+                  </View>
+                  <Text style={styles.detailText}>Location: {request.hospital_city}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <View style={styles.calendarIcon}>
+                    <FontAwesome5 name="calendar" size={16} color="#fff" />
+                  </View>
+                  <Text style={styles.detailText}>{request.needed_by_date}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <View style={styles.bloodIcon}>
+                    <FontAwesome5 name="tint" size={16} color="#fff" />
+                  </View>
+                  <Text style={styles.detailText}>Blood: {request.blood_group} x{request.units_needed}</Text>
+                </View>
               </View>
-              <Text style={styles.detailText}>User Name</Text>
+
+              <TouchableOpacity style={styles.respondButton}>
+                <Text style={styles.respondButtonText}>Respond to Request</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.detailRow}>
-              <View style={styles.locationIcon}>
-                <MaterialCommunityIcons name="map-marker" size={18} color="#fff" />
-              </View>
-              <Text style={styles.detailText}>Location: Ktm</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <View style={styles.calendarIcon}>
-                <FontAwesome5 name="calendar" size={16} color="#fff" />
-              </View>
-              <Text style={styles.detailText}>2082-07-22</Text>
-            </View>
+          ))
+        ) : (
+          <View style={[styles.emergencyCard, { justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={styles.noRequestText}>No emergency blood requests at the moment</Text>
           </View>
+        )}
 
-          <TouchableOpacity style={styles.respondButton}>
-            <Text style={styles.respondButtonText}>Respond to Request</Text>
-          </TouchableOpacity>
-        </View>
 
         {/* Action Grid */}
         <View style={styles.actionGrid}>
@@ -162,7 +207,10 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.actionLabel}>Find Donors</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionCard}>
+          <TouchableOpacity 
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('BloodRequestsFeed')}
+          >
             <View style={styles.actionIconContainer}>
               <FontAwesome5 name="tint" size={24} color="#DC143C" />
             </View>
@@ -170,6 +218,15 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.actionCard}>
+            <View style={styles.actionIconContainer}>
+              <FontAwesome name="ambulance" size={26} color="#666" />
+            </View>
+            <Text style={styles.actionLabel}>Ambulance</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionCard}
+            onPress={() => navigation.navigate('Ambulance')}
+          >
             <View style={styles.actionIconContainer}>
               <FontAwesome name="ambulance" size={26} color="#666" />
             </View>
@@ -758,7 +815,22 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 9,
     borderTopRightRadius: 9,
     marginTop: 2
-  }
+  },
+  bloodIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  noRequestText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
 });
 
 export default HomeScreen;

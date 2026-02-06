@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -7,52 +7,121 @@ import {
   StyleSheet,
   ScrollView,
   StatusBar,
+  Alert,
+  Modal,
+  FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { AuthContext } from '../context/AuthContext';
+import { apiConfig } from '../config/api';
 
-export default function AddBloodRequest() {
+export default function BloodRequestScreen({ navigation }) {
+  const { user, token } = useContext(AuthContext);
   const [patientName, setPatientName] = useState('');
-  const [contactPerson, setContactPerson] = useState('');
   const [bloodGroup, setBloodGroup] = useState('');
-  const [province, setProvince] = useState('');
-  const [district, setDistrict] = useState('');
-  const [localLevel, setLocalLevel] = useState('');
-  const [hospital, setHospital] = useState('');
-  const [requiredPint, setRequiredPint] = useState('');
-  const [phone, setPhone] = useState('');
-  const [requiredDate, setRequiredDate] = useState('');
-  const [requiredTime, setRequiredTime] = useState('');
-  const [caseDetail, setCaseDetail] = useState('');
+  const [unitsNeeded, setUnitsNeeded] = useState('');
+  const [urgencyLevel, setUrgencyLevel] = useState('');
+  const [hospitalName, setHospitalName] = useState('');
+  const [hospitalAddress, setHospitalAddress] = useState('');
+  const [hospitalCity, setHospitalCity] = useState('');
+  const [hospitalContact, setHospitalContact] = useState('');
+  const [neededByDate, setNeededByDate] = useState('');
+  const [description, setDescription] = useState('');
+  
+  const [loading, setLoading] = useState(false);
+  const [bloodGroupModal, setBloodGroupModal] = useState(false);
+  const [urgencyModal, setUrgencyModal] = useState(false);
 
-  const handleProceed = () => {
-    console.log('Proceed clicked', {
-      patientName,
-      contactPerson,
-      bloodGroup,
-      province,
-      district,
-      localLevel,
-      hospital,
-      requiredPint,
-      phone,
-      requiredDate,
-      requiredTime,
-      caseDetail,
-    });
-    // Add your form submission logic here
+  const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+  const urgencyLevels = ['critical', 'urgent', 'normal'];
+
+  const handleSubmit = async () => {
+    // Validation
+    if (!patientName.trim()) {
+      Alert.alert('Error', 'Please enter patient name');
+      return;
+    }
+    if (!bloodGroup) {
+      Alert.alert('Error', 'Please select blood group');
+      return;
+    }
+    if (!unitsNeeded || unitsNeeded < 1 || unitsNeeded > 20) {
+      Alert.alert('Error', 'Units needed must be between 1 and 20');
+      return;
+    }
+    if (!urgencyLevel) {
+      Alert.alert('Error', 'Please select urgency level');
+      return;
+    }
+    if (!hospitalName.trim()) {
+      Alert.alert('Error', 'Please enter hospital name');
+      return;
+    }
+    if (!hospitalCity.trim()) {
+      Alert.alert('Error', 'Please enter hospital city');
+      return;
+    }
+    if (!hospitalContact.trim()) {
+      Alert.alert('Error', 'Please enter hospital contact');
+      return;
+    }
+    if (!neededByDate.trim()) {
+      Alert.alert('Error', 'Please enter needed by date (YYYY-MM-DD)');
+      return;
+    }
+setLoading(true);
+    try {
+      const url = `${apiConfig.BASE_URL}/blood/request`;
+      console.log('Creating blood request at:', url);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          blood_group: bloodGroup,
+          units_needed: parseInt(unitsNeeded),
+          urgency_level: urgencyLevel,
+          patient_name: patientName,
+          hospital_name: hospitalName,
+          hospital_address: hospitalAddress,
+          hospital_city: hospitalCity,
+          hospital_contact: hospitalContact,
+          needed_by_date: neededByDate,
+          description: description,
+        }),
+      });
+
+      const data = await response.json();
+      console.log('Response:', data);
+
+      if (response.ok) {
+        Alert.alert('Success', 'Blood request created successfully', [
+          { text: 'OK', onPress: () => navigation.navigate('BloodRequestsFeed') },
+        ]);
+      } else {
+        Alert.alert('Error', data.message || 'Failed to create blood request');
+      }
+    } catch (error) {
+      console.error('Error creating blood request:', error);
+      const errorMessage = typeof error === 'string' ? error : (error?.message || 'An error occurred while creating the request');
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#7f1d1d" />
+      <StatusBar barStyle="light-content" backgroundColor="#8B0000" />
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Blood Request</Text>
+        <Text style={styles.headerTitle}>Create Blood Request</Text>
       </View>
 
       <ScrollView 
@@ -62,125 +131,213 @@ export default function AddBloodRequest() {
       >
         {/* Info Text */}
         <Text style={styles.infoText}>
-          Fill all the fields to request required blood with the whole Nepali Blood Donors Community. It will help to find donor quickly.
+          Fill all the fields to request blood from the community. Your request will be visible to registered donors.
         </Text>
 
         {/* Patient Name */}
-        <TextInput
-          style={styles.input}
-          value={patientName}
-          onChangeText={setPatientName}
-          placeholder="Patient Name:"
-          placeholderTextColor="#999"
-        />
-
-        {/* Contact Person */}
-        <TextInput
-          style={styles.input}
-          value={contactPerson}
-          onChangeText={setContactPerson}
-          placeholder="Contact Person"
-          placeholderTextColor="#999"
-        />
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Patient Name *</Text>
+          <TextInput
+            style={styles.input}
+            value={patientName}
+            onChangeText={setPatientName}
+            placeholder="Enter patient name"
+            placeholderTextColor="#999"
+          />
+        </View>
 
         {/* Blood Group Dropdown */}
-        <TouchableOpacity style={styles.dropdown}>
-          <Text style={bloodGroup ? styles.dropdownTextFilled : styles.dropdownText}>
-            {bloodGroup || 'Select Blood Group'}
-          </Text>
-          <Ionicons name="chevron-down" size={20} color="#999" />
-        </TouchableOpacity>
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Blood Group *</Text>
+          <TouchableOpacity 
+            style={styles.dropdown}
+            onPress={() => setBloodGroupModal(true)}
+          >
+            <Text style={bloodGroup ? styles.dropdownTextFilled : styles.dropdownText}>
+              {bloodGroup || 'Select Blood Group'}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color="#999" />
+          </TouchableOpacity>
+        </View>
 
-        {/* Province Dropdown */}
-        <TouchableOpacity style={styles.dropdown}>
-          <Text style={province ? styles.dropdownTextFilled : styles.dropdownText}>
-            {province || 'Select Province'}
-          </Text>
-          <Ionicons name="chevron-down" size={20} color="#999" />
-        </TouchableOpacity>
+        {/* Blood Group Modal */}
+        <Modal visible={bloodGroupModal} transparent animationType="slide">
+          <SafeAreaView style={styles.modal}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setBloodGroupModal(false)}>
+                <Text style={styles.modalCloseText}>Close</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Select Blood Group</Text>
+              <View style={{ width: 50 }} />
+            </View>
+            <FlatList
+              data={bloodGroups}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setBloodGroup(item);
+                    setBloodGroupModal(false);
+                  }}
+                >
+                  <Text style={styles.modalItemText}>{item}</Text>
+                  {bloodGroup === item && (
+                    <Ionicons name="checkmark" size={20} color="#8B0000" />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </SafeAreaView>
+        </Modal>
 
-        {/* District Dropdown */}
-        <TouchableOpacity style={styles.dropdown}>
-          <Text style={district ? styles.dropdownTextFilled : styles.dropdownText}>
-            {district || 'Select District'}
-          </Text>
-          <Ionicons name="chevron-down" size={20} color="#999" />
-        </TouchableOpacity>
-
-        {/* Local Level Dropdown */}
-        <TouchableOpacity style={styles.dropdown}>
-          <Text style={localLevel ? styles.dropdownTextFilled : styles.dropdownText}>
-            {localLevel || 'Select Local Level'}
-          </Text>
-          <Ionicons name="chevron-down" size={20} color="#999" />
-        </TouchableOpacity>
-
-        {/* Hospital */}
-        <TextInput
-          style={styles.input}
-          value={hospital}
-          onChangeText={setHospital}
-          placeholder="Hospital"
-          placeholderTextColor="#999"
-        />
-
-        {/* Required Pint */}
-        <TextInput
-          style={styles.input}
-          value={requiredPint}
-          onChangeText={setRequiredPint}
-          placeholder="Required Pint"
-          placeholderTextColor="#999"
-          keyboardType="numeric"
-        />
-
-        {/* Phone */}
-        <TextInput
-          style={styles.input}
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="Phone"
-          placeholderTextColor="#999"
-          keyboardType="phone-pad"
-        />
-
-        {/* Required Date */}
-        <TextInput
-          style={styles.input}
-          value={requiredDate}
-          onChangeText={setRequiredDate}
-          placeholder="Required Date YYYY-MM-DD"
-          placeholderTextColor="#999"
-        />
-
-        {/* Required Time */}
-        <TouchableOpacity style={styles.timeInput}>
+        {/* Units Needed */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Units Needed (1-20) *</Text>
           <TextInput
-            style={styles.timeInputText}
-            value={requiredTime}
-            onChangeText={setRequiredTime}
-            placeholder="Required Time"
+            style={styles.input}
+            value={unitsNeeded}
+            onChangeText={setUnitsNeeded}
+            placeholder="Enter number of units"
             placeholderTextColor="#999"
-            editable={false}
+            keyboardType="number-pad"
           />
-          <Ionicons name="time-outline" size={24} color="#666" />
-        </TouchableOpacity>
+        </View>
 
-        {/* Case Detail */}
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={caseDetail}
-          onChangeText={setCaseDetail}
-          placeholder="Case Detail"
-          placeholderTextColor="#999"
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
+        {/* Urgency Level Dropdown */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Urgency Level *</Text>
+          <TouchableOpacity 
+            style={styles.dropdown}
+            onPress={() => setUrgencyModal(true)}
+          >
+            <Text style={urgencyLevel ? styles.dropdownTextFilled : styles.dropdownText}>
+              {urgencyLevel || 'Select Urgency Level'}
+            </Text>
+            <Ionicons name="chevron-down" size={20} color="#999" />
+          </TouchableOpacity>
+        </View>
 
-        {/* Proceed Button */}
-        <TouchableOpacity style={styles.proceedButton} onPress={handleProceed}>
-          <Text style={styles.proceedButtonText}>Proceed</Text>
+        {/* Urgency Level Modal */}
+        <Modal visible={urgencyModal} transparent animationType="slide">
+          <SafeAreaView style={styles.modal}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setUrgencyModal(false)}>
+                <Text style={styles.modalCloseText}>Close</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Select Urgency Level</Text>
+              <View style={{ width: 50 }} />
+            </View>
+            <FlatList
+              data={urgencyLevels}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setUrgencyLevel(item);
+                    setUrgencyModal(false);
+                  }}
+                >
+                  <Text style={styles.modalItemText}>
+                    {item.charAt(0).toUpperCase() + item.slice(1)}
+                  </Text>
+                  {urgencyLevel === item && (
+                    <Ionicons name="checkmark" size={20} color="#8B0000" />
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </SafeAreaView>
+        </Modal>
+
+        {/* Hospital Name */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Hospital Name *</Text>
+          <TextInput
+            style={styles.input}
+            value={hospitalName}
+            onChangeText={setHospitalName}
+            placeholder="Enter hospital name"
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        {/* Hospital Address */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Hospital Address</Text>
+          <TextInput
+            style={styles.input}
+            value={hospitalAddress}
+            onChangeText={setHospitalAddress}
+            placeholder="Enter hospital address"
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        {/* Hospital City */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Hospital City *</Text>
+          <TextInput
+            style={styles.input}
+            value={hospitalCity}
+            onChangeText={setHospitalCity}
+            placeholder="Enter hospital city"
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        {/* Hospital Contact */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Hospital Contact *</Text>
+          <TextInput
+            style={styles.input}
+            value={hospitalContact}
+            onChangeText={setHospitalContact}
+            placeholder="Enter contact number"
+            placeholderTextColor="#999"
+            keyboardType="phone-pad"
+          />
+        </View>
+
+        {/* Needed By Date */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Needed By Date (YYYY-MM-DD) *</Text>
+          <TextInput
+            style={styles.input}
+            value={neededByDate}
+            onChangeText={setNeededByDate}
+            placeholder="2024-02-15"
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        {/* Description */}
+        <View style={styles.fieldContainer}>
+          <Text style={styles.label}>Description</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Add any additional details..."
+            placeholderTextColor="#999"
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
+
+        {/* Submit Button */}
+        <TouchableOpacity 
+          style={[styles.submitButton, loading && styles.submitButtonDisabled]} 
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.submitButtonText}>Create Request</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -193,19 +350,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#7f1d1d',
+    backgroundColor: '#8B0000',
     paddingVertical: 16,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  backButton: {
-    marginRight: 16,
+    justifyContent: 'center',
   },
   headerTitle: {
     color: '#fff',
     fontSize: 20,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
@@ -216,9 +371,19 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: '#000',
+    color: '#555',
     lineHeight: 20,
+    marginBottom: 24,
+    fontWeight: '500',
+  },
+  fieldContainer: {
     marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
   },
   input: {
     backgroundColor: '#fff',
@@ -229,7 +394,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: '#333',
-    marginBottom: 16,
   },
   dropdown: {
     backgroundColor: '#fff',
@@ -241,7 +405,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
   },
   dropdownText: {
     fontSize: 16,
@@ -250,42 +413,65 @@ const styles = StyleSheet.create({
   dropdownTextFilled: {
     fontSize: 16,
     color: '#333',
-  },
-  timeInput: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  timeInputText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
-    padding: 0,
+    fontWeight: '500',
   },
   textArea: {
     height: 120,
     paddingTop: 14,
+    paddingBottom: 14,
   },
-  proceedButton: {
-    backgroundColor: '#7f1d1d',
+  modal: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    color: '#8B0000',
+    fontWeight: '600',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  submitButton: {
+    backgroundColor: '#8B0000',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
     shadowRadius: 4,
     elevation: 4,
   },
-  proceedButtonText: {
+  submitButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
