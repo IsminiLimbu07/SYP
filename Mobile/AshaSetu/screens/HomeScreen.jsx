@@ -128,69 +128,96 @@ const HomeScreen = ({ navigation }) => {
               {user?.full_name?.split(' ')[0] || 'User'}! 👋
             </Text>
           </View>
-          <TouchableOpacity 
-            style={styles.profileButton}
-            onPress={handleProfilePress}
-          >
-            <View style={styles.avatarSmall}>
-              <Text style={styles.avatarTextSmall}>
-                {user?.full_name?.charAt(0)?.toUpperCase() || 'U'}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          
+          {/* Header Actions */}
+          <View style={styles.headerActions}>
+            <TouchableOpacity 
+              style={styles.myOffersButton}
+              onPress={() => navigation.navigate('MyDonationResponses')}
+            >
+              <MaterialCommunityIcons name="hand-heart-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.profileButton}
+              onPress={handleProfilePress}
+            >
+              <View style={styles.avatarSmall}>
+                <Text style={styles.avatarTextSmall}>
+                  {user?.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* COMPACT Emergency Blood Request Card - Shows only most recent */}
         {loading ? (
-          <View style={[styles.emergencyCard, { justifyContent: 'center', alignItems: 'center' }]}>
-            <ActivityIndicator size="large" color="#8B0000" />
+          <View style={[styles.emergencyCard, { justifyContent: 'center', alignItems: 'center', minHeight: 120 }]}>
+            <ActivityIndicator size="large" color="#fff" />
           </View>
         ) : bloodRequests.length > 0 ? (
-          bloodRequests.map((request, index) => (
-            <View key={request.request_id || index} style={styles.emergencyCard}>
-              <View style={styles.emergencyHeader}>
-                <Text style={styles.emergencyTitle}>Emergency Blood Request</Text>
-                <TouchableOpacity style={styles.viewAllButton}>
-                  <View style={styles.eyeIcon}>
-                    <View style={styles.eyeOuter} />
-                    <View style={styles.eyeInner} />
-                  </View>
-                </TouchableOpacity>
+          <View style={styles.emergencyCard}>
+            <View style={styles.emergencyHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.emergencyTitle}>🚨 Emergency Blood Request</Text>
+                {bloodRequests.length > 1 && (
+                  <Text style={styles.emergencyCount}>+{bloodRequests.length - 1} more critical request{bloodRequests.length - 1 > 1 ? 's' : ''}</Text>
+                )}
               </View>
-
-              <View style={styles.requestDetails}>
-                <View style={styles.detailRow}>
-                  <View style={styles.userIcon}>
-                    <FontAwesome name="user" size={18} color="#fff" />
-                  </View>
-                  <Text style={styles.detailText}>{request.patient_name}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <View style={styles.locationIcon}>
-                    <MaterialCommunityIcons name="map-marker" size={18} color="#fff" />
-                  </View>
-                  <Text style={styles.detailText}>Location: {request.hospital_city}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <View style={styles.calendarIcon}>
-                    <FontAwesome5 name="calendar" size={16} color="#fff" />
-                  </View>
-                  <Text style={styles.detailText}>{request.needed_by_date}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <View style={styles.bloodIcon}>
-                    <FontAwesome5 name="tint" size={16} color="#fff" />
-                  </View>
-                  <Text style={styles.detailText}>Blood: {request.blood_group} x{request.units_needed}</Text>
-                </View>
-              </View>
-
-              <TouchableOpacity style={styles.respondButton}>
-                <Text style={styles.respondButtonText}>Respond to Request</Text>
+              <TouchableOpacity 
+                style={styles.viewAllButtonCompact}
+                onPress={() => navigation.navigate('BloodRequestsFeed')}
+              >
+                <Text style={styles.viewAllText}>View All</Text>
+                <MaterialCommunityIcons name="chevron-right" size={16} color="#fff" />
               </TouchableOpacity>
             </View>
-          ))
+
+            {/* Show only the most recent request - COMPACT DESIGN */}
+            <View style={styles.requestDetails}>
+              <View style={styles.compactRow}>
+                <View style={styles.compactLeft}>
+                  <Text style={styles.patientNameLarge}>{bloodRequests[0].patient_name}</Text>
+                  <View style={styles.compactInfo}>
+                    <MaterialCommunityIcons name="map-marker" size={14} color="rgba(255,255,255,0.9)" />
+                    <Text style={styles.compactText}>{bloodRequests[0].hospital_city}</Text>
+                  </View>
+                </View>
+                <View style={styles.bloodBadgeCompact}>
+                  <Text style={styles.bloodBadgeText}>{bloodRequests[0].blood_group}</Text>
+                  <Text style={styles.unitsBadgeText}>{bloodRequests[0].units_needed}p</Text>
+                </View>
+              </View>
+
+              <View style={styles.bottomInfo}>
+                <View style={styles.compactInfo}>
+                  <FontAwesome5 name="calendar" size={12} color="rgba(255,255,255,0.9)" />
+                  <Text style={styles.compactText}>
+                    {new Date(bloodRequests[0].needed_by_date).toLocaleDateString()}
+                  </Text>
+                </View>
+                <View style={[styles.compactInfo, { flex: 1 }]}>
+                  <MaterialCommunityIcons name="hospital-building" size={14} color="rgba(255,255,255,0.9)" />
+                  <Text style={styles.compactText} numberOfLines={1}>
+                    {bloodRequests[0].hospital_name}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.respondButton}
+              onPress={() => navigation.navigate('RespondToRequest', { request: bloodRequests[0] })}
+            >
+              <MaterialCommunityIcons name="hand-heart" size={20} color="#8B0000" />
+              <Text style={styles.respondButtonText}>I Can Help</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
-          <View style={[styles.emergencyCard, { justifyContent: 'center', alignItems: 'center' }]}>
-            <Text style={styles.noRequestText}>No emergency blood requests at the moment</Text>
+          <View style={[styles.emergencyCard, { justifyContent: 'center', alignItems: 'center', minHeight: 120 }]}>
+            <MaterialCommunityIcons name="heart-pulse" size={48} color="rgba(255,255,255,0.3)" />
+            <Text style={styles.noRequestText}>No emergency requests at the moment</Text>
           </View>
         )}
 
@@ -334,6 +361,21 @@ const styles = StyleSheet.create({
   headerTop: {
     flex: 1
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  myOffersButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
   greeting: {
     fontSize: 16,
     color: '#fff',
@@ -346,7 +388,7 @@ const styles = StyleSheet.create({
     marginTop: 5
   },
   profileButton: {
-    marginLeft: 15
+    // Removed marginLeft since it's now in headerActions with gap
   },
   avatarSmall: {
     width: 50,
@@ -362,36 +404,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#8B0000'
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    gap: 10
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#8B0000',
-    marginBottom: 5
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center'
   },
   section: {
     paddingHorizontal: 20,
@@ -413,142 +425,133 @@ const styles = StyleSheet.create({
     color: '#8B0000',
     fontWeight: '500'
   },
+  // NEW COMPACT EMERGENCY CARD STYLES
   emergencyCard: {
     backgroundColor: '#8B0000',
     marginHorizontal: 20,
     marginVertical: 15,
-    padding: 20,
-    borderRadius: 20,
+    padding: 18,
+    borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 6
   },
   emergencyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20
+    alignItems: 'flex-start',
+    marginBottom: 14,
   },
   emergencyTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
-    color: '#fff'
+    color: '#fff',
+    letterSpacing: 0.3,
   },
-  viewAllButton: {
-    padding: 5
+  emergencyCount: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.75)',
+    marginTop: 3,
+    fontWeight: '500',
   },
-  eyeIcon: {
-    width: 24,
-    height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative'
-  },
-  eyeOuter: {
-    width: 24,
-    height: 16,
-    borderWidth: 2,
-    borderColor: '#fff',
-    borderRadius: 12
-  },
-  eyeInner: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    backgroundColor: '#fff',
-    borderRadius: 4
-  },
-  requestDetails: {
-    marginBottom: 20
-  },
-  detailRow: {
+  viewAllButtonCompact: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingLeft: 5
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 2,
   },
-  userIcon: {
-    width: 22,
-    height: 22,
+  viewAllText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  requestDetails: {
+    marginBottom: 14,
+  },
+  compactRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  compactLeft: {
+    flex: 1,
     marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center'
   },
-  userHead: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff'
+  patientNameLarge: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 5,
   },
-  userBody: {
-    width: 14,
-    height: 10,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 7,
-    borderTopRightRadius: 7,
-    marginTop: 2
-  },
-  locationIcon: {
-    width: 22,
-    height: 22,
-    marginRight: 12,
+  compactInfo: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end'
+    marginBottom: 4,
+    gap: 5,
   },
-  locationPin: {
-    width: 12,
-    height: 16,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 6,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 6
+  compactText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '400',
   },
-  locationBase: {
-    width: 4,
-    height: 4,
-    backgroundColor: '#fff',
-    marginTop: -2
+  bloodBadgeCompact: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    minWidth: 60,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  calendarIcon: {
-    width: 22,
-    height: 22,
-    marginRight: 12,
-    justifyContent: 'center'
+  bloodBadgeText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    letterSpacing: 0.5,
   },
-  calendarTop: {
-    width: 18,
-    height: 4,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 2,
-    borderTopRightRadius: 2
+  unitsBadgeText: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 2,
+    fontWeight: '500',
   },
-  calendarBody: {
-    width: 18,
-    height: 14,
-    backgroundColor: '#fff',
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2,
-    borderWidth: 1,
-    borderColor: '#fff'
-  },
-  detailText: {
-    fontSize: 15,
-    color: '#fff'
+  bottomInfo: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.15)',
   },
   respondButton: {
     backgroundColor: '#fff',
-    paddingVertical: 14,
-    borderRadius: 25,
-    alignItems: 'center'
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
   },
   respondButtonText: {
     color: '#8B0000',
-    fontSize: 16,
-    fontWeight: 'bold'
+    fontSize: 15,
+    fontWeight: 'bold',
+    letterSpacing: 0.3,
   },
+  noRequestText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  // END COMPACT STYLES
   actionGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -573,64 +576,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12
-  },
-  plusIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  plusHorizontal: {
-    position: 'absolute',
-    width: 20,
-    height: 3,
-    backgroundColor: '#666'
-  },
-  plusVertical: {
-    position: 'absolute',
-    width: 3,
-    height: 20,
-    backgroundColor: '#666'
-  },
-  dropIcon: {
-    width: 20,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  dropShape: {
-    width: 16,
-    height: 20,
-    backgroundColor: '#DC143C',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 8,
-    transform: [{ rotate: '45deg' }]
-  },
-  ambulanceIcon: {
-    width: 28,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  ambulanceBody: {
-    width: 24,
-    height: 14,
-    backgroundColor: '#666',
-    borderRadius: 4
-  },
-  aidIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  aidBox: {
-    width: 20,
-    height: 20,
-    backgroundColor: '#DC143C',
-    borderRadius: 4
   },
   actionLabel: {
     fontSize: 14,
@@ -722,114 +667,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     flex: 1
-  },
-  homeIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'flex-end',
-    alignItems: 'center'
-  },
-  homeBase: {
-    width: 18,
-    height: 12,
-    backgroundColor: '#666',
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2
-  },
-  homeRoof: {
-    position: 'absolute',
-    top: 3,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 12,
-    borderRightWidth: 12,
-    borderBottomWidth: 10,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#666'
-  },
-  targetIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  targetOuter: {
-    position: 'absolute',
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#666'
-  },
-  targetMiddle: {
-    position: 'absolute',
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    borderWidth: 2,
-    borderColor: '#666'
-  },
-  targetInner: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#666'
-  },
-  syringeIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    transform: [{ rotate: '45deg' }]
-  },
-  syringeBarrel: {
-    width: 12,
-    height: 16,
-    backgroundColor: '#666',
-    borderRadius: 2
-  },
-  syringeNeedle: {
-    width: 2,
-    height: 8,
-    backgroundColor: '#666',
-    marginTop: -1
-  },
-  profileIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  profileHead: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#666'
-  },
-  profileBody: {
-    width: 18,
-    height: 12,
-    backgroundColor: '#666',
-    borderTopLeftRadius: 9,
-    borderTopRightRadius: 9,
-    marginTop: 2
-  },
-  bloodIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  noRequestText: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
-    textAlign: 'center',
   },
 });
 

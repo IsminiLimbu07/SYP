@@ -15,7 +15,7 @@ import { AuthContext } from '../context/AuthContext';
 import { apiConfig } from '../config/api';
 
 export default function BloodRequestsFeedScreen({ navigation }) {
-  const { token } = useContext(AuthContext);
+  const { token, user } = useContext(AuthContext);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,17 +68,7 @@ export default function BloodRequestsFeedScreen({ navigation }) {
   };
 
   const handleRespond = (request) => {
-    Alert.alert(
-      'Respond to Request',
-      `Do you want to donate ${request.blood_group} blood for ${request.patient_name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Yes, I can donate',
-          onPress: () => navigation.navigate('BloodRequest', { requestToRespond: request }),
-        },
-      ]
-    );
+    navigation.navigate('RespondToRequest', { request });
   };
 
   const getUrgencyColor = (urgency) => {
@@ -252,23 +242,41 @@ export default function BloodRequestsFeedScreen({ navigation }) {
 
                 {/* Action Buttons */}
                 <View style={styles.actionRow}>
-                  <TouchableOpacity
-                    style={styles.detailsBtn}
-                    onPress={() =>
-                      Alert.alert('Not implemented', 'Request details view is not implemented yet.')
-                    }
-                  >
-                    <Ionicons name="information-circle-outline" size={20} color="#8B0000" />
-                    <Text style={styles.detailsBtnText}>Details</Text>
-                  </TouchableOpacity>
+                  {request.requester_id === user?.user_id ? (
+                    // Show Manage Responses button for requester
+                    <TouchableOpacity
+                      style={[styles.respondBtn, { flex: 1 }]}
+                      onPress={() =>
+                        navigation.navigate('ManageResponses', { requestId: request.request_id })
+                      }
+                    >
+                      <MaterialCommunityIcons name="account-group" size={20} color="#fff" />
+                      <Text style={styles.respondBtnText}>
+                        Manage Responses ({request.total_responses})
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    // Show I Can Help button for donors
+                    <>
+                      <TouchableOpacity
+                        style={styles.detailsBtn}
+                        onPress={() =>
+                          Alert.alert('Not implemented', 'Request details view is not implemented yet.')
+                        }
+                      >
+                        <Ionicons name="information-circle-outline" size={20} color="#8B0000" />
+                        <Text style={styles.detailsBtnText}>Details</Text>
+                      </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.respondBtn}
-                    onPress={() => handleRespond(request)}
-                  >
-                    <MaterialCommunityIcons name="hand-heart" size={20} color="#fff" />
-                    <Text style={styles.respondBtnText}>I Can Help</Text>
-                  </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.respondBtn}
+                        onPress={() => handleRespond(request)}
+                      >
+                        <MaterialCommunityIcons name="hand-heart" size={20} color="#fff" />
+                        <Text style={styles.respondBtnText}>I Can Help</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </View>
 
                 {/* Requester Contact */}

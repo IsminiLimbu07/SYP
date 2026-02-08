@@ -17,6 +17,9 @@ import BloodRequestsFeedScreen from '../screens/BloodRequestsFeedScreen';
 import AmbulanceScreen from '../screens/AmbulanceScreen';
 import FirstAidScreen from '../screens/FirstAidScreen';
 import DonationScreen from '../screens/DonationScreen';
+import RespondToRequestScreen from '../screens/RespondToRequestScreen';
+import ManageResponseScreen from '../screens/ManageResponseScreen';
+import MyDonationResponseScreen from '../screens/MyDonationResponseScreen';
 
 
 const Stack = createNativeStackNavigator();
@@ -132,6 +135,21 @@ const AppNavigator = () => {
               headerTintColor: '#fff',
               headerTitleStyle: { fontWeight: 'bold' }
             }}
+          />
+          <Stack.Screen 
+            name="RespondToRequest" 
+            component={RespondToRequestScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="ManageResponses" 
+            component={ManageResponseScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="MyDonationResponses" 
+            component={MyDonationResponseScreen}
+            options={{ headerShown: false }}
           />
         </>
       ) : (

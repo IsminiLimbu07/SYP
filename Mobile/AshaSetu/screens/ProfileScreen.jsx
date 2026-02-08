@@ -100,6 +100,14 @@ const ProfileScreen = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.actionButton}
+            onPress={() => navigation.navigate('MyDonationResponses')}
+          >
+            <Text style={styles.actionButtonText}>My Donation History</Text>
+            <Text style={styles.actionButtonIcon}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={() => navigation.navigate('Home')}
           >
             <Text style={styles.actionButtonText}>Back to Home</Text>
