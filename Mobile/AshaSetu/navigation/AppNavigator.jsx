@@ -4,9 +4,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 
-// Import screens
+// ── Auth Screens ──
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+
+// ── Main Screens ──
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
@@ -21,8 +23,18 @@ import RespondToRequestScreen from '../screens/RespondToRequestScreen';
 import ManageResponseScreen from '../screens/ManageResponseScreen';
 import MyDonationResponseScreen from '../screens/MyDonationResponseScreen';
 
+// ── Community Screens ──
+import CommunityHomeScreen from '../screens/CommunityHomeScreen';
+import CommunityChatroomScreen from '../screens/CommunityChatRoomScreen';
 
 const Stack = createNativeStackNavigator();
+
+// Shared dark-red header style
+const darkRedHeader = {
+  headerStyle: { backgroundColor: '#8B0000' },
+  headerTintColor: '#fff',
+  headerTitleStyle: { fontWeight: 'bold' },
+};
 
 const AppNavigator = () => {
   const { user, loading } = useContext(AuthContext);
@@ -38,137 +50,111 @@ const AppNavigator = () => {
   return (
     <Stack.Navigator>
       {user ? (
+        // ══════════════════════════════════════
         // Authenticated Stack
+        // ══════════════════════════════════════
         <>
-          <Stack.Screen 
-            name="Home" 
+          {/* Home — no header (custom header inside screen) */}
+          <Stack.Screen
+            name="Home"
             component={HomeScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="Profile" 
+
+          {/* Profile */}
+          <Stack.Screen
+            name="Profile"
             component={ProfileScreen}
-            options={{ 
-              title: 'My Profile',
-              headerStyle: { backgroundColor: '#8B0000' },
-              headerTintColor: '#fff',
-              headerTitleStyle: { fontWeight: 'bold' }
-            }}
+            options={{ title: 'My Profile', ...darkRedHeader }}
           />
-          <Stack.Screen 
-            name="EditProfile" 
+          <Stack.Screen
+            name="EditProfile"
             component={EditProfileScreen}
-            options={{ 
-              title: 'Edit Profile',
-              headerStyle: { backgroundColor: '#8B0000' },
-              headerTintColor: '#fff',
-              headerTitleStyle: { fontWeight: 'bold' }
-            }}
+            options={{ title: 'Edit Profile', ...darkRedHeader }}
           />
-          <Stack.Screen 
-            name="ChangePassword" 
+          <Stack.Screen
+            name="ChangePassword"
             component={ChangePasswordScreen}
-            options={{ 
-              title: 'Change Password',
-              headerStyle: { backgroundColor: '#8B0000' },
-              headerTintColor: '#fff',
-              headerTitleStyle: { fontWeight: 'bold' }
-            }}
+            options={{ title: 'Change Password', ...darkRedHeader }}
           />
-        
-          <Stack.Screen 
-            name="FindDonor" 
+
+          {/* Blood / Donors */}
+          <Stack.Screen
+            name="FindDonor"
             component={FindDonorsScreen}
-            options={{ 
-              title: 'Find Donors',
-              headerStyle: { backgroundColor: '#8B0000' },
-              headerTintColor: '#fff',
-              headerTitleStyle: { fontWeight: 'bold' }
-            }}
+            options={{ title: 'Find Donors', ...darkRedHeader }}
           />
           <Stack.Screen
-            name="Ambulance"
-            component={AmbulanceScreen}
-            options={{
-              title: 'Ambulance Services',
-              headerStyle: { backgroundColor: '#8B0000' },
-              headerTintColor: '#fff',
-              headerTitleStyle: { fontWeight: 'bold' }
-            }}
-          />
-          <Stack.Screen
-            name="FirstAid"
-            component={FirstAidScreen}
-            options={{
-              title: 'First Aid',
-              headerStyle: { backgroundColor: '#8B0000' },
-              headerTintColor: '#fff',
-              headerTitleStyle: { fontWeight: 'bold' }
-            }}
-          />
-          <Stack.Screen
-            name="Donation"
-            component={DonationScreen}
-            options={{
-              title: 'Donate Blood',
-              headerStyle: { backgroundColor: '#8B0000' },
-              headerTintColor: '#fff',
-              headerTitleStyle: { fontWeight: 'bold' }
-            }}
-          />
-          <Stack.Screen 
-            name="BloodRequest" 
+            name="BloodRequest"
             component={BloodRequestScreen}
-            options={{ 
-              title: 'Blood Request',
-              headerStyle: { backgroundColor: '#8B0000' },
-              headerTintColor: '#fff',
-              headerTitleStyle: { fontWeight: 'bold' }
-            }}
+            options={{ title: 'Blood Request', ...darkRedHeader }}
           />
           <Stack.Screen
             name="BloodRequestsFeed"
             component={BloodRequestsFeedScreen}
-            options={{
-              title: 'Blood Requests',
-              headerStyle: { backgroundColor: '#8B0000' },
-              headerTintColor: '#fff',
-              headerTitleStyle: { fontWeight: 'bold' }
-            }}
+            options={{ title: 'Blood Requests', ...darkRedHeader }}
           />
-          <Stack.Screen 
-            name="RespondToRequest" 
+          <Stack.Screen
+            name="RespondToRequest"
             component={RespondToRequestScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="ManageResponses" 
+          <Stack.Screen
+            name="ManageResponses"
             component={ManageResponseScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="MyDonationResponses" 
+          <Stack.Screen
+            name="MyDonationResponses"
             component={MyDonationResponseScreen}
+            options={{ headerShown: false }}
+          />
+
+          {/* Utilities */}
+          <Stack.Screen
+            name="Ambulance"
+            component={AmbulanceScreen}
+            options={{ title: 'Ambulance Services', ...darkRedHeader }}
+          />
+          <Stack.Screen
+            name="FirstAid"
+            component={FirstAidScreen}
+            options={{ title: 'First Aid', ...darkRedHeader }}
+          />
+          <Stack.Screen
+            name="Donation"
+            component={DonationScreen}
+            options={{ title: 'Medical Fundraising', ...darkRedHeader }}
+          />
+
+          {/* ── Community ──
+               Community screen has its OWN header built in (headerShown: false)
+               so the bottom nav can navigate here cleanly without a double header. */}
+          <Stack.Screen
+            name="Community"
+            component={CommunityHomeScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CommunityChatroom"
+            component={CommunityChatroomScreen}
             options={{ headerShown: false }}
           />
         </>
       ) : (
-        // Guest Stack
+        // ══════════════════════════════════════
+        // Guest / Unauthenticated Stack
+        // ══════════════════════════════════════
         <>
-          <Stack.Screen 
-            name="Login" 
+          <Stack.Screen
+            name="Login"
             component={LoginScreen}
             options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="Register" 
+          <Stack.Screen
+            name="Register"
             component={RegisterScreen}
-            options={{ 
-              title: 'Register',
-              headerStyle: { backgroundColor: '#8B0000' },
-              headerTintColor: '#fff',
-              headerTitleStyle: { fontWeight: 'bold' }
-            }}
+            options={{ title: 'Register', ...darkRedHeader }}
           />
         </>
       )}

@@ -137,7 +137,6 @@ const HomeScreen = ({ navigation }) => {
             >
               <MaterialCommunityIcons name="hand-heart-outline" size={24} color="#fff" />
             </TouchableOpacity>
-            
             <TouchableOpacity 
               style={styles.profileButton}
               onPress={handleProfilePress}
@@ -325,7 +324,10 @@ const HomeScreen = ({ navigation }) => {
         >
           <MaterialCommunityIcons name="hand-coin" size={20} color="#8A8A8A" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity 
+          style={styles.navItem}
+          onPress={() => navigation.navigate('Community')}
+        >
           <MaterialCommunityIcons name="account-group-outline" size={20} color="#8A8A8A" />
         </TouchableOpacity>
         <TouchableOpacity 

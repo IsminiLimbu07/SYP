@@ -156,10 +156,7 @@ export default function DonationCampaignsScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Medical Fundraising</Text>
+        <Text style={styles.headerTitle}>Create Campaign</Text>
         <TouchableOpacity onPress={() => navigation.navigate('CreateCampaign')}>
           <Ionicons name="add-circle-outline" size={28} color="#fff" />
         </TouchableOpacity>
@@ -372,12 +369,16 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   header: {
+    margin: -10, 
     backgroundColor: '#8B0000',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-evenly',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginLeft: 20,
+    marginRight: 20
   },
   headerTitle: {
     fontSize: 20,
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     marginHorizontal: 16,
-    marginTop: 12,
+    marginTop: 20,
     borderRadius: 8,
     borderLeftWidth: 4,
     borderLeftColor: '#8B0000',
