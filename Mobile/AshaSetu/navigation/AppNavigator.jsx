@@ -3,6 +3,7 @@ import React, { useContext } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
+import VerifyEmailScreen from '../screens/VerifyEmailScreen'; // ← fixed: capital V and E
 
 // ── Auth Screens ──
 import LoginScreen from '../screens/LoginScreen';
@@ -26,6 +27,18 @@ import MyDonationResponseScreen from '../screens/MyDonationResponseScreen';
 // ── Community Screens ──
 import CommunityHomeScreen from '../screens/CommunityHomeScreen';
 import CommunityChatroomScreen from '../screens/CommunityChatRoomScreen';
+
+export const linking = {
+  prefixes: [
+    'ashasetu://',
+    'exp:// http://127.0.0.1:4040/--/',
+  ],
+  config: {
+    screens: {
+      VerifyEmail: 'verify-email',
+    },
+  },
+};
 
 const Stack = createNativeStackNavigator();
 
@@ -127,9 +140,7 @@ const AppNavigator = () => {
             options={{ title: 'Medical Fundraising', ...darkRedHeader }}
           />
 
-          {/* ── Community ──
-               Community screen has its OWN header built in (headerShown: false)
-               so the bottom nav can navigate here cleanly without a double header. */}
+          {/* Community */}
           <Stack.Screen
             name="Community"
             component={CommunityHomeScreen}
@@ -139,6 +150,13 @@ const AppNavigator = () => {
             name="CommunityChatroom"
             component={CommunityChatroomScreen}
             options={{ headerShown: false }}
+          />
+
+          {/* ← FIXED: VerifyEmail is now INSIDE the authenticated <> fragment */}
+          <Stack.Screen
+            name="VerifyEmail"
+            component={VerifyEmailScreen}
+            options={{ title: 'Verify Email', ...darkRedHeader }}
           />
         </>
       ) : (

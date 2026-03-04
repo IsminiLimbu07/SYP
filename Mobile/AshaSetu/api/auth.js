@@ -114,3 +114,26 @@ export const changePassword = async (token, passwordData) => {
     throw error;
   }
 };
+
+// ─── NEW: Send verification email ─────────────────────────────────────────────
+export const sendVerificationEmail = async (token) => {
+  try {
+    const response = await makeRequest(apiConfig.ENDPOINTS.AUTH.SEND_VERIFICATION_EMAIL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to send verification email');
+    }
+
+    return {
+      success: response.success,
+      message: response.message,
+    };
+  } catch (error) {
+    throw error;
+  }
+};

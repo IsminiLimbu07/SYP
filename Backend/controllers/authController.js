@@ -1,5 +1,9 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import { sql } from '../config/db.js';
 
 // Register new user
@@ -371,3 +375,164 @@ export const changePassword = async (req, res) => {
         });
     }
 };
+
+// ─── Send verification email ──────────────────────────────────────────────────
+export const sendVerificationEmail = async (req, res) => {
+    try {
+        // DEBUG: Log everything
+        console.log('========== ENV DEBUG START ==========');
+        console.log('1. Current directory:', process.cwd());
+        console.log('2. All env keys:', Object.keys(process.env));
+        console.log('3. NGROK_URL value:', process.env.NGROK_URL);
+        console.log('4. EMAIL_USER value:', process.env.EMAIL_USER);
+        console.log('5. JWT_SECRET exists:', !!process.env.JWT_SECRET);
+        console.log('========== ENV DEBUG END ==========');
+
+        // Get user from DB
+        const users = await sql`
+            SELECT user_id, full_name, email, is_verified
+            FROM users WHERE user_id = ${req.user.user_id}
+        `;
+
+        if (users.length === 0) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        const user = users[0];
+
+        if (user.is_verified) {
+            return res.status(400).json({ success: false, message: "Email is already verified" });
+        }
+
+        // Generate a secure token + 24h expiry
+        const token = crypto.randomBytes(32).toString('hex');
+        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+        // Save token to DB
+        await sql`
+            UPDATE users
+            SET verification_token = ${token},
+                verification_token_expires = ${expires}
+            WHERE user_id = ${user.user_id}
+        `;
+
+        // HARDCODE THE URL (temporary fix)
+        const NGROK_URL = 'https://malachi-inconvertible-lita.ngrok-free.dev';
+        const verificationUrl = `${NGROK_URL}/api/auth/verify-email?token=${token}&userId=${user.user_id}&ngrok-skip-browser-warning=true`;
+        
+        console.log('✅ Verification URL being sent:', verificationUrl);
+
+        // Send email via nodemailer
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
+        await transporter.sendMail({
+            from: `"AshaSetu" <${process.env.EMAIL_USER}>`,
+            to: user.email,
+            subject: 'Verify your email — AshaSetu',
+            html: `
+                <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+                    <div style="background:#8B0000;padding:28px;text-align:center">
+                        <h1 style="color:#fff;margin:0;font-size:22px">Verify Your Email</h1>
+                    </div>
+                    <div style="padding:32px">
+                        <p style="color:#333;font-size:15px">Hi <strong>${user.full_name}</strong>,</p>
+                        <p style="color:#555;font-size:14px;line-height:1.6">
+                            Click the button below to verify your email address. This link expires in <strong>24 hours</strong>.
+                        </p>
+                        <div style="text-align:center;margin:28px 0">
+                            <a href="${verificationUrl}"
+                               style="background:#8B0000;color:#fff;text-decoration:none;padding:13px 32px;border-radius:8px;font-size:15px;font-weight:bold;display:inline-block">
+                                Verify Email
+                            </a>
+                        </div>
+                        <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
+                            Or copy this link:<br>
+                            <span style="color:#0066cc;word-break:break-all">${verificationUrl}</span>
+                        </p>
+                        <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
+                            If you didn't request this, you can safely ignore this email.
+                        </p>
+                    </div>
+                </div>
+            `,
+        });
+
+        res.status(200).json({ success: true, message: "Verification email sent successfully" });
+
+    } catch (error) {
+        console.error("Error sending verification email:", error);
+        res.status(500).json({ success: false, message: "Failed to send verification email" });
+    }
+};
+
+// ─── Verify email via link click ──────────────────────────────────────────────
+export const verifyEmail = async (req, res) => {
+    res.setHeader('ngrok-skip-browser-warning', 'true');
+    try {
+        const { token, userId } = req.query;
+
+        if (!token || !userId) {
+            return res.status(400).send(verifyPage(false, 'Invalid verification link.'));
+        }
+
+        const users = await sql`
+            SELECT * FROM users
+            WHERE user_id = ${userId}
+              AND verification_token = ${token}
+              AND verification_token_expires > NOW()
+        `;
+
+        if (users.length === 0) {
+            return res.status(400).send(verifyPage(false, 'This link is invalid or has expired. Please request a new one from the app.'));
+        }
+
+        if (users[0].is_verified) {
+            return res.send(verifyPage(true, 'Your email is already verified!'));
+        }
+
+        await sql`
+            UPDATE users
+            SET is_verified = true,
+                verification_token = NULL,
+                verification_token_expires = NULL
+            WHERE user_id = ${userId}
+        `;
+
+        res.send(verifyPage(true, 'Your email has been verified! You can now return to the app.'));
+
+    } catch (error) {
+        console.error("Error verifying email:", error);
+        res.status(500).send(verifyPage(false, 'Something went wrong. Please try again.'));
+    }
+};
+
+// Simple HTML page shown after clicking the email link
+const verifyPage = (success, message) => `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>${success ? 'Email Verified' : 'Verification Failed'}</title>
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <style>
+          body{font-family:Arial,sans-serif;background:#f5f5f5;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
+          .card{background:#fff;border-radius:16px;padding:48px 36px;text-align:center;max-width:400px;box-shadow:0 4px 24px rgba(0,0,0,0.1)}
+          .icon{font-size:56px;margin-bottom:16px}
+          h1{color:${success ? '#4caf50' : '#f44336'};margin:0 0 12px}
+          p{color:#555;font-size:15px;line-height:1.6}
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="icon">${success ? '✅' : '❌'}</div>
+          <h1>${success ? 'Email Verified!' : 'Verification Failed'}</h1>
+          <p>${message}</p>
+        </div>
+      </body>
+    </html>
+`;

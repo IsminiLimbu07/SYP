@@ -6,8 +6,9 @@ import authRoutes from './routes/authRoutes.js';
 import bloodRoutes from './routes/bloodRoutes.js';
 import communityRoutes from './routes/communityRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
+import donorRoutes from './routes/donorRoutes.js';
 
-dotenv.config();
+dotenv.config(); // ← moved to top so .env loads before anything uses it
 
 const app = express();
 
@@ -15,6 +16,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/api/donors', donorRoutes);
 
 const PORT = process.env.PORT || 9000;
 
@@ -42,7 +44,6 @@ async function initDB() {
         // ========== STEP 2: Add volunteer columns to existing table ==========
         console.log('📝 Adding volunteer columns to users table...');
         
-        // Check if columns exist first
         const existingColumns = await sql`
             SELECT column_name 
             FROM information_schema.columns 
@@ -79,7 +80,29 @@ async function initDB() {
         } else {
             console.log('⚠️  total_donations column already exists');
         }
-        
+
+        // ========== STEP 3: Add verification token columns ==========
+        const verifyColumns = await sql`
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = 'users'
+            AND column_name IN ('verification_token', 'verification_token_expires')
+        `;
+        const existingVerify = verifyColumns.map(c => c.column_name); // ← fixed typo
+
+        if (!existingVerify.includes('verification_token')) {
+            await sql`ALTER TABLE users ADD COLUMN verification_token VARCHAR(64)`;
+            console.log('✅ Added verification_token column');
+        } else {
+            console.log('⚠️  verification_token column already exists');
+        }
+
+        if (!existingVerify.includes('verification_token_expires')) {
+            await sql`ALTER TABLE users ADD COLUMN verification_token_expires TIMESTAMPTZ`;
+            console.log('✅ Added verification_token_expires column');
+        } else {
+            console.log('⚠️  verification_token_expires column already exists');
+        }
+
         console.log('');
 
         // User profiles table
@@ -150,7 +173,6 @@ async function initDB() {
         
         console.log('📝 Creating community tables...');
 
-        // Blood Donation Events table
         await sql`
             CREATE TABLE IF NOT EXISTS donation_events (
                 event_id SERIAL PRIMARY KEY,
@@ -174,7 +196,6 @@ async function initDB() {
         `;
         console.log('✅ Created donation_events table');
 
-        // Event Participants table
         await sql`
             CREATE TABLE IF NOT EXISTS event_participants (
                 participant_id SERIAL PRIMARY KEY,
@@ -188,7 +209,6 @@ async function initDB() {
         `;
         console.log('✅ Created event_participants table');
 
-        // Community Chat Messages table
         await sql`
             CREATE TABLE IF NOT EXISTS chat_messages (
                 message_id SERIAL PRIMARY KEY,
@@ -202,7 +222,6 @@ async function initDB() {
         `;
         console.log('✅ Created chat_messages table');
 
-        // Event Ratings table
         await sql`
             CREATE TABLE IF NOT EXISTS event_ratings (
                 rating_id SERIAL PRIMARY KEY,
@@ -217,36 +236,24 @@ async function initDB() {
         console.log('✅ Created event_ratings table\n');
 
         // ==================== CREATE INDEXES ====================
-        
         console.log('📝 Creating indexes...');
 
-        // Blood Requests indexes
         await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_requester ON blood_requests(requester_id)`;
         await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_blood_group ON blood_requests(blood_group)`;
         await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_urgency ON blood_requests(urgency_level)`;
         await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_status ON blood_requests(status)`;
         await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_city ON blood_requests(hospital_city)`;
-        
-        // Donation Responses indexes
         await sql`CREATE INDEX IF NOT EXISTS idx_donation_responses_request ON donation_responses(request_id)`;
         await sql`CREATE INDEX IF NOT EXISTS idx_donation_responses_donor ON donation_responses(donor_id)`;
         await sql`CREATE INDEX IF NOT EXISTS idx_donation_responses_status ON donation_responses(status)`;
-        
-        // Community Events indexes
         await sql`CREATE INDEX IF NOT EXISTS idx_donation_events_organizer ON donation_events(organizer_id)`;
         await sql`CREATE INDEX IF NOT EXISTS idx_donation_events_date ON donation_events(event_date)`;
         await sql`CREATE INDEX IF NOT EXISTS idx_donation_events_status ON donation_events(status)`;
         await sql`CREATE INDEX IF NOT EXISTS idx_donation_events_city ON donation_events(city)`;
-        
-        // Event Participants indexes
         await sql`CREATE INDEX IF NOT EXISTS idx_event_participants_event ON event_participants(event_id)`;
         await sql`CREATE INDEX IF NOT EXISTS idx_event_participants_user ON event_participants(user_id)`;
-        
-        // Chat Messages indexes
         await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_sender ON chat_messages(sender_id)`;
         await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON chat_messages(created_at DESC)`;
-        
-        // Event Ratings indexes
         await sql`CREATE INDEX IF NOT EXISTS idx_event_ratings_event ON event_ratings(event_id)`;
         await sql`CREATE INDEX IF NOT EXISTS idx_event_ratings_user ON event_ratings(user_id)`;
 
@@ -265,12 +272,9 @@ async function initDB() {
         
         if (columns.length === 4) {
             console.log('✅ All volunteer columns present:');
-            columns.forEach(col => {
-                console.log(`   - ${col.column_name} (${col.data_type})`);
-            });
+            columns.forEach(col => console.log(`   - ${col.column_name} (${col.data_type})`));
         } else {
             console.log('⚠️  Missing columns:', columns.length, '/4 found');
-            console.log('   Found:', columns.map(c => c.column_name).join(', '));
         }
 
         const tables = await sql`
@@ -283,9 +287,7 @@ async function initDB() {
         
         if (tables.length === 4) {
             console.log('✅ All community tables present:');
-            tables.forEach(t => {
-                console.log(`   - ${t.table_name}`);
-            });
+            tables.forEach(t => console.log(`   - ${t.table_name}`));
         } else {
             console.log('⚠️  Missing tables:', tables.length, '/4 found');
         }
@@ -296,7 +298,6 @@ async function initDB() {
     } catch (error) {
         console.error("\n❌ Error initializing database:", error);
         console.error("Error details:", error.message);
-        console.error("Error code:", error.code);
         
         if (error.message.includes('column') && error.message.includes('already exists')) {
             console.log('\n⚠️  Some columns already exist - this is OK!');
@@ -363,7 +364,7 @@ initDB().then(() => {
         console.log(`🚀 Server running on port ${PORT}`);
         console.log(`📍 API Base URL: http://0.0.0.0:${PORT}`);
         console.log(`🏥 Health check: http://localhost:${PORT}/`);
-        console.log(`📲 Ngrok URL: https://tularaemic-electroneutral-ozella.ngrok-free.dev`);
+        console.log(`📲 Ngrok URL: https://malachi-inconvertible-lita.ngrok-free.dev`);
         console.log(`✨ Community features enabled!`);
         console.log(`\n🎯 Ready to accept requests!\n`);
     });

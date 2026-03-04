@@ -1,7 +1,6 @@
-// Mobile/AshaSetu/screens/RegisterScreen.jsx
-// FIXED: No more ref.measureLayout errors
+// RegisterScreen_Dark_to_Light.jsx — Converted to White & Red Theme (Glitch Fixed)
 
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext, useRef, useEffect, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -12,450 +11,421 @@ import {
   Alert,
   ActivityIndicator,
   SafeAreaView,
-  Platform,
-  Keyboard
+  Animated,
+  Keyboard,
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import { registerUser } from '../api/auth';
 
-const RegisterScreen = ({ navigation }) => {
+const REQUIRED_FIELDS = ['full_name', 'email', 'city', 'phone_number', 'password'];
+const POUCH_HEIGHT = 120;
+
+// ─── Isolated field — typing only re-renders THIS component ──────────────────
+const FormField = memo(({ fieldKey, label, placeholder, scrollY, keyboardType,
+  secure, hint, maxLength, autoCapitalize, value, onChangeText, scrollRef }) => {
+
+  const [isFocused, setIsFocused] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const hasValue = value?.length > 0;
+
+  return (
+    <View style={styles.fieldGroup}>
+      <View style={styles.labelRow}>
+        <Text style={[styles.fieldLabel, isFocused && styles.fieldLabelFocused]}>{label}</Text>
+        {hasValue && <Text style={styles.checkmark}>✓</Text>}
+      </View>
+      <View style={[
+        styles.inputBox,
+        isFocused && styles.inputBoxFocused,
+        hasValue && !isFocused && styles.inputBoxFilled,
+      ]}>
+        <View style={[styles.accentBar, { backgroundColor: hasValue ? '#8B0000' : '#f0dede' }]} />
+        <TextInput
+          style={[styles.textInput, secure && { paddingRight: 44 }]}
+          placeholder={placeholder}
+          placeholderTextColor="#bbb"
+          value={value}
+          onChangeText={onChangeText}
+          onFocus={() => {
+            setIsFocused(true);
+            scrollRef.current?.scrollTo({ y: scrollY, animated: true });
+          }}
+          onBlur={() => setIsFocused(false)}
+          secureTextEntry={secure && !showPass}
+          keyboardType={keyboardType || 'default'}
+          autoCapitalize={autoCapitalize || 'sentences'}
+          autoCorrect={false}
+          maxLength={maxLength}
+          returnKeyType={secure ? 'done' : 'next'}
+          onSubmitEditing={secure ? () => Keyboard.dismiss() : undefined}
+        />
+        {secure && (
+          <TouchableOpacity onPress={() => setShowPass(p => !p)} style={styles.eyeBtn}>
+            <Text style={styles.eyeIcon}>{showPass ? '👁' : '🔒'}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      {hint && <Text style={styles.hint}>{hint}</Text>}
+    </View>
+  );
+});
+
+// ─── Isolated pouch — only re-renders when filledCount changes ────────────────
+const BloodPouch = memo(({ filledCount, isComplete, fillAnim, pulseAnim }) => {
+  const pouchFillHeight = fillAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, POUCH_HEIGHT],
+  });
+
+  return (
+    <View style={styles.pouchSection}>
+      {/* Left info — plain View */}
+      <View style={styles.pouchInfo}>
+        <Text style={styles.pouchMainText}>
+          {isComplete ? '🩸 Ready!' : 'One Step Closer'}
+        </Text>
+        {!isComplete && <Text style={styles.pouchSubText}>to Saving a Life</Text>}
+        <Text style={styles.pouchCount}>{filledCount} / {REQUIRED_FIELDS.length} required</Text>
+        <View style={styles.dotsRow}>
+          {REQUIRED_FIELDS.map((_, i) => (
+            <View key={i} style={[styles.dot, i < filledCount && styles.dotFilled]} />
+          ))}
+        </View>
+        {isComplete && <Text style={styles.pouchComplete}>Register below ↓</Text>}
+      </View>
+
+      {/* Right pouch — scale ONLY on this Animated.View */}
+      <Animated.View style={[styles.pouchRight, { transform: [{ scale: pulseAnim }] }]}>
+        <View style={styles.pouchWrap}>
+          <View style={styles.pouchHook} />
+          <View style={styles.pouchBody}>
+            <Animated.View style={[styles.pouchFill, { height: pouchFillHeight }]} />
+            <View style={styles.pouchGloss} />
+            <View style={styles.pouchLabelBadge}>
+              <Text style={styles.pouchLabelText}>A+</Text>
+            </View>
+            <View style={[styles.pouchTick, { bottom: POUCH_HEIGHT * 0.75 }]} />
+            <View style={[styles.pouchTick, { bottom: POUCH_HEIGHT * 0.5 }]} />
+            <View style={[styles.pouchTick, { bottom: POUCH_HEIGHT * 0.25 }]} />
+          </View>
+          <View style={styles.tubeSegment} />
+          <View style={styles.tubeCap} />
+        </View>
+      </Animated.View>
+    </View>
+  );
+});
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
+const RegisterScreen_Dark = ({ navigation }) => {
   const { login } = useContext(AuthContext);
   const scrollViewRef = useRef(null);
-  
+
   const [formData, setFormData] = useState({
-    full_name: '',
-    email: '',
-    district: '',
-    phone_number: '',
-    password: ''
+    full_name: '', email: '', city: '',
+    phone_number: '', blood_type: '', district: '', password: '',
   });
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [focusedField, setFocusedField] = useState(null);
+  const [filledCount, setFilledCount] = useState(0);
+
+  const fillAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+  const pulseLoop = useRef(null);
+  const prevFilledCount = useRef(0);
+
+  // Ambient glow — runs once
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 1, duration: 2500, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 2500, useNativeDriver: false }),
+      ])
+    ).start();
+  }, []);
+
+  // Pouch animation — only fires when filledCount changes
+  useEffect(() => {
+    if (prevFilledCount.current === filledCount) return;
+    prevFilledCount.current = filledCount;
+
+    const progress = filledCount / REQUIRED_FIELDS.length;
+    Animated.spring(fillAnim, {
+      toValue: progress,
+      tension: 40,
+      friction: 8,
+      useNativeDriver: false,
+    }).start();
+
+    if (filledCount === REQUIRED_FIELDS.length) {
+      pulseLoop.current?.stop();
+      pulseLoop.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.06, duration: 700, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+        ])
+      );
+      pulseLoop.current.start();
+    } else {
+      pulseLoop.current?.stop();
+      pulseLoop.current = null;
+      Animated.spring(pulseAnim, { toValue: 1, useNativeDriver: true }).start();
+    }
+  }, [filledCount]);
+
+  const updateField = useCallback((field, value) => {
+    setFormData(prev => {
+      const next = { ...prev, [field]: value };
+      const count = REQUIRED_FIELDS.filter(f => next[f]?.trim().length > 0).length;
+      setFilledCount(count);
+      return next;
+    });
+  }, []);
 
   const handleRegister = async () => {
-    if (!formData.full_name || !formData.email || !formData.phone_number || !formData.password) {
-      Alert.alert('Required Fields Missing', 'Please fill in all required fields to continue.');
+    if (!formData.full_name || !formData.email || !formData.city || !formData.phone_number || !formData.password) {
+      Alert.alert('Required Fields Missing', 'Please fill in all required fields.');
       return;
     }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address.');
       return;
     }
-
-    const phoneRegex = /^98\d{8}$/;
-    if (!phoneRegex.test(formData.phone_number)) {
-      Alert.alert('Invalid Phone Number', 'Phone number must start with 98 and be 10 digits long.');
+    if (!/^98\d{8}$/.test(formData.phone_number)) {
+      Alert.alert('Invalid Phone', 'Phone must start with 98 and be 10 digits.');
       return;
     }
-
     if (formData.password.length < 6) {
-      Alert.alert('Weak Password', 'Password must be at least 6 characters long.');
+      Alert.alert('Weak Password', 'Password must be at least 6 characters.');
       return;
     }
-
     setLoading(true);
     try {
       const { district, ...registerData } = formData;
       const response = await registerUser(registerData);
-
-      if (response.success) {
-        await login(response.token, response.user);
-        Alert.alert('Success', 'Your account has been created successfully!');
-      }
+      if (response.success) await login(response.token, response.user);
     } catch (error) {
-      Alert.alert('Registration Failed', error.message || 'Unable to create account. Please try again.');
+      Alert.alert('Registration Failed', error.message || 'Unable to create account.');
     } finally {
       setLoading(false);
     }
   };
 
-  const updateField = (field, value) => {
-    setFormData({ ...formData, [field]: value });
-  };
-
-  // Simple scroll function with fixed positions
-  const scrollToField = (scrollY) => {
-    if (scrollViewRef.current) {
-      scrollViewRef.current.scrollTo({
-        y: scrollY,
-        animated: true,
-      });
-    }
-  };
+  const isComplete = filledCount === REQUIRED_FIELDS.length;
+  const ambientOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.06, 0.14] });
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef}
-        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header Section */}
+        {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerDecoration} />
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join AshaSetu to help save lives</Text>
+          <Animated.View style={[styles.headerGlow, { opacity: ambientOpacity }]} />
+          <View style={styles.headerCircle} />
+          <Text style={styles.headerTitle}>Create Account</Text>
+          <Text style={styles.headerSub}>Join AshaSetu · Save Lives</Text>
         </View>
 
-        {/* Registration Form */}
-        <View style={styles.formContainer}>
-          {/* Full Name */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Full Name *</Text>
-            <View style={[
-              styles.inputWrapper,
-              focusedField === 'full_name' && styles.inputWrapperFocused
-            ]}>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your full name"
-                placeholderTextColor="#999"
-                value={formData.full_name}
-                onChangeText={(value) => updateField('full_name', value)}
-                onFocus={() => {
-                  setFocusedField('full_name');
-                  scrollToField(0);
-                }}
-                onBlur={() => setFocusedField(null)}
-                autoComplete="name"
-                autoCorrect={false}
-                returnKeyType="next"
-              />
-            </View>
-          </View>
+        {/* Blood Pouch */}
+        <BloodPouch
+          filledCount={filledCount}
+          isComplete={isComplete}
+          fillAnim={fillAnim}
+          pulseAnim={pulseAnim}
+        />
 
-          {/* Email */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email Address *</Text>
-            <View style={[
-              styles.inputWrapper,
-              focusedField === 'email' && styles.inputWrapperFocused
-            ]}>
-              <TextInput
-                style={styles.input}
-                placeholder="your.email@example.com"
-                placeholderTextColor="#999"
-                value={formData.email}
-                onChangeText={(value) => updateField('email', value)}
-                onFocus={() => {
-                  setFocusedField('email');
-                  scrollToField(80);
-                }}
-                onBlur={() => setFocusedField(null)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-                autoCorrect={false}
-                returnKeyType="next"
-              />
-            </View>
-          </View>
+        {/* Form */}
+        <View style={styles.form}>
+          <FormField fieldKey="full_name" label="Full Name *" placeholder="Your full name" scrollY={0} autoCapitalize="words" value={formData.full_name} onChangeText={v => updateField('full_name', v)} scrollRef={scrollViewRef} />
+          <FormField fieldKey="email" label="Email Address *" placeholder="your@email.com" scrollY={80} keyboardType="email-address" autoCapitalize="none" value={formData.email} onChangeText={v => updateField('email', v)} scrollRef={scrollViewRef} />
+          <FormField fieldKey="city" label="City *" placeholder="Your city" scrollY={160} autoCapitalize="words" value={formData.city} onChangeText={v => updateField('city', v)} scrollRef={scrollViewRef} />
+          <FormField fieldKey="phone_number" label="Phone Number *" placeholder="98XXXXXXXX" scrollY={240} keyboardType="phone-pad" hint="Must start with 98 · 10 digits total" maxLength={10} value={formData.phone_number} onChangeText={v => updateField('phone_number', v)} scrollRef={scrollViewRef} />
+          <FormField fieldKey="blood_type" label="Blood Type (Optional)" placeholder="e.g. A+, O-, AB+" scrollY={320} autoCapitalize="characters" value={formData.blood_type} onChangeText={v => updateField('blood_type', v)} scrollRef={scrollViewRef} />
+          <FormField fieldKey="district" label="District (Optional)" placeholder="Your district" scrollY={400} autoCapitalize="words" value={formData.district} onChangeText={v => updateField('district', v)} scrollRef={scrollViewRef} />
+          <FormField fieldKey="password" label="Password *" placeholder="Min. 6 characters" scrollY={480} secure hint="At least 6 characters" autoCapitalize="none" value={formData.password} onChangeText={v => updateField('password', v)} scrollRef={scrollViewRef} />
 
-          {/* Phone Number */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Phone Number *</Text>
-            <View style={[
-              styles.inputWrapper,
-              focusedField === 'phone' && styles.inputWrapperFocused
-            ]}>
-              <TextInput
-                style={styles.input}
-                placeholder="98XXXXXXXX"
-                placeholderTextColor="#999"
-                value={formData.phone_number}
-                onChangeText={(value) => updateField('phone_number', value)}
-                onFocus={() => {
-                  setFocusedField('phone');
-                  scrollToField(180);
-                }}
-                onBlur={() => setFocusedField(null)}
-                keyboardType="phone-pad"
-                autoComplete="tel"
-                maxLength={10}
-                returnKeyType="next"
-              />
-            </View>
-            <Text style={styles.hint}>Format: 98XXXXXXXX (10 digits)</Text>
-          </View>
-
-          {/* District */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>District (Optional)</Text>
-            <View style={[
-              styles.inputWrapper,
-              focusedField === 'district' && styles.inputWrapperFocused
-            ]}>
-              <TextInput
-                style={styles.input}
-                placeholder="Your district"
-                placeholderTextColor="#999"
-                value={formData.district}
-                onChangeText={(value) => updateField('district', value)}
-                onFocus={() => {
-                  setFocusedField('district');
-                  scrollToField(300);
-                }}
-                onBlur={() => setFocusedField(null)}
-                autoCorrect={false}
-                returnKeyType="next"
-              />
-            </View>
-          </View>
-
-          {/* Password */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password *</Text>
-            <View style={[
-              styles.inputWrapper,
-              focusedField === 'password' && styles.inputWrapperFocused
-            ]}>
-              <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder="Minimum 6 characters"
-                placeholderTextColor="#999"
-                value={formData.password}
-                onChangeText={(value) => updateField('password', value)}
-                onFocus={() => {
-                  setFocusedField('password');
-                  scrollToField(400);
-                }}
-                onBlur={() => setFocusedField(null)}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoComplete="password"
-                autoCorrect={false}
-                returnKeyType="done"
-                onSubmitEditing={() => Keyboard.dismiss()}
-              />
-              <TouchableOpacity 
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.eyeIcon}>
-                  {showPassword ? '○' : '●'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.hint}>Must be at least 6 characters</Text>
-          </View>
-
-          {/* Terms Notice */}
-          <View style={styles.termsContainer}>
+          <View style={styles.terms}>
             <View style={styles.termsDivider} />
             <Text style={styles.termsText}>
-              By creating an account, you agree to our Terms of Service and Privacy Policy
+              By registering, you agree to our Terms of Service and Privacy Policy
             </Text>
           </View>
 
-          {/* Register Button */}
           <TouchableOpacity
-            style={[styles.registerButton, loading && styles.registerButtonDisabled]}
+            style={[styles.regBtn, loading && styles.regBtnDisabled, isComplete && styles.regBtnReady]}
             onPress={handleRegister}
             disabled={loading}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.registerButtonText}>Create Account</Text>
+              <Text style={styles.regBtnText}>
+                {isComplete ? '🩸 Create My Account' : 'Create Account'}
+              </Text>
             )}
           </TouchableOpacity>
 
-          {/* Login Link */}
-          <View style={styles.loginContainer}>
+          <View style={styles.loginRow}>
             <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate('Login')}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
               <Text style={styles.loginLink}>Sign In</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Extra space at bottom for keyboard */}
-        <View style={styles.bottomSpacing} />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA'
-  },
-  scrollView: {
-    flex: 1
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 50,
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  scrollContent: { flexGrow: 1 },
+
+  // Header — red bg, white text (same structure, new colors)
   header: {
     backgroundColor: '#8B0000',
-    paddingTop: 60,
-    paddingBottom: 40,
-    paddingHorizontal: 30,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    paddingTop: 50, paddingBottom: 36, paddingHorizontal: 28,
+    borderBottomLeftRadius: 32, borderBottomRightRadius: 32,
+    overflow: 'hidden',
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 16, elevation: 10,
   },
-  headerDecoration: {
-    position: 'absolute',
-    top: 20,
-    right: 30,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  headerGlow: {
+    position: 'absolute', top: -20, right: -20,
+    width: 150, height: 150, borderRadius: 75,
+    backgroundColor: '#fff',
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 8,
-    letterSpacing: 0.5,
+  headerCircle: {
+    position: 'absolute', top: -30, right: -30,
+    width: 120, height: 120, borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontWeight: '400',
-    letterSpacing: 0.3,
-  },
-  formContainer: {
-    paddingHorizontal: 30,
-    paddingTop: 30,
-  },
-  inputContainer: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 8,
-    letterSpacing: 0.3,
-  },
-  inputWrapper: {
+  headerTitle: { fontSize: 32, fontWeight: '900', color: '#fff', letterSpacing: 0.5, marginBottom: 6 },
+  headerSub: { fontSize: 14, color: 'rgba(255,255,255,0.75)', fontWeight: '500', letterSpacing: 0.3 },
+
+  // Pouch card — white bg, red accents
+  pouchSection: {
     flexDirection: 'row',
+    backgroundColor: '#fff5f5',
+    marginHorizontal: 20, marginTop: 20,
+    borderRadius: 20, padding: 20,
+    borderWidth: 1, borderColor: 'rgba(139,0,0,0.12)',
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1, shadowRadius: 12, elevation: 5,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E1E8ED',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
   },
-  inputWrapperFocused: {
+  pouchInfo: { flex: 1, paddingRight: 16 },
+  pouchMainText: { fontSize: 15, fontWeight: '800', color: '#8B0000', marginBottom: 2 },
+  pouchSubText: { fontSize: 13, color: '#8B0000', opacity: 0.65, marginBottom: 8 },
+  pouchCount: { fontSize: 12, color: '#aaa', marginBottom: 10 },
+  dotsRow: { flexDirection: 'row', gap: 7 },
+  dot: {
+    width: 11, height: 11, borderRadius: 6,
+    backgroundColor: '#f0dede', borderWidth: 1, borderColor: '#e0c0c0',
+  },
+  dotFilled: {
+    backgroundColor: '#8B0000', borderColor: '#cc0000',
+  },
+  pouchComplete: { marginTop: 10, fontSize: 12, color: '#8B0000', fontWeight: '700' },
+
+  pouchRight: { alignItems: 'center' },
+  pouchWrap: { alignItems: 'center' },
+  pouchHook: {
+    width: 26, height: 14,
+    borderTopWidth: 3, borderLeftWidth: 3, borderRightWidth: 3,
     borderColor: '#8B0000',
-    shadowColor: '#8B0000',
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
-    elevation: 4,
+    borderTopLeftRadius: 13, borderTopRightRadius: 13,
+    borderBottomWidth: 0,
   },
-  input: {
-    flex: 1,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: '#2C3E50',
-    fontWeight: '400',
+  pouchBody: {
+    width: 68, height: POUCH_HEIGHT,
+    borderRadius: 16, borderTopLeftRadius: 8, borderTopRightRadius: 8,
+    backgroundColor: 'rgba(255,220,220,0.5)',
+    borderWidth: 2, borderColor: 'rgba(139,0,0,0.25)',
+    overflow: 'hidden', position: 'relative',
   },
-  passwordInput: {
-    paddingRight: 40,
+  pouchFill: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: '#cc0000',
   },
-  eyeButton: {
-    padding: 8,
-    position: 'absolute',
-    right: 12,
+  pouchGloss: {
+    position: 'absolute', top: 8, left: 8,
+    width: 10, bottom: 8,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderRadius: 5, zIndex: 2,
   },
-  eyeIcon: {
-    fontSize: 20,
-    color: '#8B0000',
-    fontWeight: '600',
+  pouchLabelBadge: {
+    position: 'absolute', top: 8, right: 8,
+    backgroundColor: 'rgba(139,0,0,0.12)',
+    borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2, zIndex: 3,
   },
-  hint: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginTop: 6,
-    fontStyle: 'italic',
+  pouchLabelText: { fontSize: 11, fontWeight: '800', color: '#8B0000' },
+  pouchTick: {
+    position: 'absolute', left: 4, right: 4,
+    height: 1, backgroundColor: 'rgba(139,0,0,0.2)', zIndex: 2,
   },
-  termsContainer: {
-    marginTop: 10,
-    marginBottom: 30,
-    alignItems: 'center',
+  tubeSegment: {
+    width: 5, height: 20,
+    backgroundColor: 'rgba(139,0,0,0.35)', borderRadius: 3,
   },
-  termsDivider: {
-    width: 60,
-    height: 2,
-    backgroundColor: '#E1E8ED',
-    marginBottom: 16,
+  tubeCap: { width: 10, height: 6, backgroundColor: '#8B0000', borderRadius: 3 },
+
+  // Form
+  form: { paddingHorizontal: 20, paddingTop: 24 },
+  fieldGroup: { marginBottom: 16 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 },
+  fieldLabel: { fontSize: 11, fontWeight: '700', color: '#999', letterSpacing: 1.2, textTransform: 'uppercase' },
+  fieldLabelFocused: { color: '#8B0000' },
+  checkmark: { fontSize: 13, color: '#8B0000', fontWeight: '800' },
+  inputBox: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fafafa', borderWidth: 1.5, borderColor: '#eee',
+    borderRadius: 12, overflow: 'hidden', height: 52,
   },
-  termsText: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    textAlign: 'center',
-    lineHeight: 18,
-    paddingHorizontal: 20,
+  inputBoxFocused: {
+    borderColor: '#8B0000', backgroundColor: '#fff9f9',
+    shadowColor: '#8B0000', shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
   },
-  registerButton: {
-    backgroundColor: '#8B0000',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#8B0000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-    minHeight: 54,
+  inputBoxFilled: { borderColor: 'rgba(139,0,0,0.2)', backgroundColor: '#fff' },
+  accentBar: { width: 4, alignSelf: 'stretch' },
+  textInput: {
+    flex: 1, fontSize: 15, color: '#1a1a1a',
+    paddingHorizontal: 12, paddingVertical: 15,
   },
-  registerButtonDisabled: {
-    backgroundColor: '#B8B8B8',
-    shadowOpacity: 0.1,
+  eyeBtn: { position: 'absolute', right: 12, padding: 4 },
+  eyeIcon: { fontSize: 16 },
+  hint: { fontSize: 11, color: '#bbb', marginTop: 5, paddingLeft: 4, fontStyle: 'italic' },
+
+  terms: { marginTop: 12, marginBottom: 24, alignItems: 'center' },
+  termsDivider: { width: 40, height: 1, backgroundColor: '#eee', marginBottom: 12 },
+  termsText: { fontSize: 11, color: '#bbb', textAlign: 'center', lineHeight: 17, paddingHorizontal: 20 },
+
+  regBtn: {
+    backgroundColor: '#8B0000', borderRadius: 14, height: 54,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#8B0000', shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
   },
-  registerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+  regBtnReady: {
+    backgroundColor: '#cc0000',
+    shadowColor: '#ff0000', shadowOpacity: 0.45, shadowRadius: 18, elevation: 12,
   },
-  loginContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 20,
-  },
-  loginText: {
-    fontSize: 15,
-    color: '#7F8C8D',
-    fontWeight: '400',
-  },
-  loginLink: {
-    fontSize: 15,
-    color: '#8B0000',
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  bottomSpacing: {
-    height: 250,
-  }
+  regBtnDisabled: { backgroundColor: '#ddd', shadowOpacity: 0 },
+  regBtnText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.8 },
+
+  loginRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20, marginBottom: 10 },
+  loginText: { fontSize: 14, color: '#999' },
+  loginLink: { fontSize: 14, color: '#8B0000', fontWeight: '700' },
 });
 
-export default RegisterScreen;
+export default RegisterScreen_Dark;
