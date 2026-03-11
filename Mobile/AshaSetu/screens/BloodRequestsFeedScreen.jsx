@@ -22,16 +22,17 @@ export default function BloodRequestsFeedScreen({ navigation }) {
   const [filter, setFilter] = useState('all'); // all, critical, urgent, normal
 
   useEffect(() => {
+    if (!token) return;
     loadBloodRequests();
-  }, [filter]);
+  }, [filter, token]);
 
   // Reload when screen gains focus so newly created requests appear
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      loadBloodRequests();
+      if (token) loadBloodRequests();
     });
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, token]);
 
   const loadBloodRequests = async () => {
     try {

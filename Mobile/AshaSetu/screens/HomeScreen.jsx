@@ -19,6 +19,8 @@ const HomeScreen = ({ navigation }) => {
   const { user, token } = useContext(AuthContext);
   const [bloodRequests, setBloodRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [nearbyEvents, setNearbyEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
 
   const quickActions = [
     {
@@ -75,13 +77,18 @@ const HomeScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
+    // Prevent making API calls until the auth token is available
+    if (!token) return;
+
     // Fetch initially and whenever the screen gains focus so new requests appear
     fetchBloodRequests();
+    fetchNearbyEvents();
     const unsubscribe = navigation.addListener('focus', () => {
       fetchBloodRequests();
+      fetchNearbyEvents();
     });
     return unsubscribe;
-  }, [navigation, token]);
+  }, [navigation, token, user?.profile?.city]);
 
   const fetchBloodRequests = async () => {
     try {
@@ -111,6 +118,66 @@ const HomeScreen = ({ navigation }) => {
       console.error('Error fetching blood requests:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getFullImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    const base = apiConfig.BASE_URL.replace(/\/api\/?$/, '');
+    if (url.startsWith('/')) return `${base}${url}`;
+    return `${base}/${url}`;
+  };
+
+  const fetchNearbyEvents = async () => {
+    try {
+      setLoadingEvents(true);
+      const city = user?.profile?.city || user?.city || '';
+
+      const buildUrl = (params) => {
+        const query = new URLSearchParams(params).toString();
+        return `${apiConfig.BASE_URL}/community/events?${query}`;
+      };
+
+      const baseParams = { status: 'upcoming', limit: 5 };
+      if (city) baseParams.city = city;
+
+      const response = await fetch(buildUrl(baseParams), {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      let events = [];
+      if (data.success) {
+        events = data.data || [];
+      }
+
+      // If user has a city, try to top up with other upcoming events so we always show at least 5
+      if (city && events.length < 5) {
+        const responseAll = await fetch(buildUrl({ status: 'upcoming', limit: 5 }), {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const allData = await responseAll.json();
+        if (allData.success) {
+          const additional = (allData.data || []).filter(
+            (e) => !events.some((existing) => existing.event_id === e.event_id)
+          );
+          events = [...events, ...additional].slice(0, 5);
+        }
+      }
+
+      setNearbyEvents(events);
+    } catch (error) {
+      console.error('Error fetching nearby events:', error);
+    } finally {
+      setLoadingEvents(false);
     }
   };
 
@@ -265,14 +332,101 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         {/* Nearby Events */}
-        <View style={styles.eventsSection}>
-          <Text style={styles.sectionTitle}>Nearby Events</Text>
-          <View style={styles.eventCard}>
-            <Image
-              source={{ uri: 'https://images.pexels.com/photos/12227661/pexels-photo-12227661.jpeg' }}
-              style={styles.eventImage}
-            />
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>📅 Nearby Events</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Community')}>
+              <Text style={styles.seeAll}>See All</Text>
+            </TouchableOpacity>
           </View>
+
+          {loadingEvents ? (
+            <View style={styles.loadingEventsContainer}>
+              <ActivityIndicator size="small" color="#8B0000" />
+              <Text style={styles.loadingEventsText}>Loading events...</Text>
+            </View>
+          ) : nearbyEvents.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {nearbyEvents.map((event) => {
+                const eventDate = new Date(event.event_date);
+                const today = new Date();
+                const daysUntil = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+                
+                return (
+                  <TouchableOpacity
+                    key={event.event_id}
+                    style={styles.eventCard}
+                    onPress={() => navigation.navigate('EventDetails', { eventId: event.event_id })}
+                  >
+                    {event.image_url ? (
+                      <Image
+                        source={{ uri: getFullImageUrl(event.image_url) }}
+                        style={styles.eventImage}
+                      />
+                    ) : (
+                      <View style={styles.eventImagePlaceholder}>
+                        <MaterialCommunityIcons name="calendar-heart" size={40} color="#DDD" />
+                      </View>
+                    )}
+                    
+                    {/* Days Until Badge */}
+                    {daysUntil === 0 ? (
+                      <View style={[styles.eventBadge, { backgroundColor: '#FF5252' }]}>
+                        <Text style={styles.eventBadgeText}>TODAY</Text>
+                      </View>
+                    ) : daysUntil === 1 ? (
+                      <View style={[styles.eventBadge, { backgroundColor: '#FF9800' }]}>
+                        <Text style={styles.eventBadgeText}>TOMORROW</Text>
+                      </View>
+                    ) : (
+                      <View style={[styles.eventBadge, { backgroundColor: '#4CAF50' }]}>
+                        <Text style={styles.eventBadgeText}>{daysUntil}D</Text>
+                      </View>
+                    )}
+
+                    <View style={styles.eventInfo}>
+                      <Text style={styles.eventTitle} numberOfLines={2}>
+                        {event.title}
+                      </Text>
+                      
+                      <View style={styles.eventMeta}>
+                        <View style={styles.eventMetaRow}>
+                          <MaterialCommunityIcons name="map-marker" size={14} color="#666" />
+                          <Text style={styles.eventMetaText} numberOfLines={1}>
+                            {event.city}
+                          </Text>
+                        </View>
+                        
+                        <View style={styles.eventMetaRow}>
+                          <MaterialCommunityIcons name="clock-outline" size={14} color="#666" />
+                          <Text style={styles.eventMetaText}>
+                            {event.start_time}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {event.max_participants && (
+                        <View style={styles.eventParticipants}>
+                          <MaterialCommunityIcons name="account-group" size={14} color="#8B0000" />
+                          <Text style={styles.eventParticipantsText}>
+                            {event.current_participants}/{event.max_participants} registered
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          ) : (
+            <View style={styles.noEventsContainer}>
+              <MaterialCommunityIcons name="calendar-blank" size={48} color="#DDD" />
+              <Text style={styles.noEventsText}>No upcoming events</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Community')}>
+                <Text style={styles.browseEventsText}>Browse Community →</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Recent Activity */}
@@ -587,22 +741,107 @@ const styles = StyleSheet.create({
   },
   eventsSection: {
     paddingHorizontal: 20,
-    marginBottom: 20
+    marginBottom: 25,
+  },
+  loadingEventsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    gap: 10,
+  },
+  loadingEventsText: {
+    fontSize: 14,
+    color: '#666',
   },
   eventCard: {
+    width: 260,
     backgroundColor: '#fff',
-    borderRadius: 15,
+    borderRadius: 12,
+    marginRight: 12,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 4
+    elevation: 3,
   },
   eventImage: {
     width: '100%',
-    height: 180,
-    resizeMode: 'cover'
+    height: 140,
+    resizeMode: 'cover',
+  },
+  eventImagePlaceholder: {
+    width: '100%',
+    height: 140,
+    backgroundColor: '#F0F0F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eventBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  eventBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  eventInfo: {
+    padding: 12,
+  },
+  eventTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  eventMeta: {
+    marginBottom: 8,
+  },
+  eventMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 4,
+  },
+  eventMetaText: {
+    fontSize: 12,
+    color: '#666',
+    flex: 1,
+  },
+  eventParticipants: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  eventParticipantsText: {
+    fontSize: 12,
+    color: '#8B0000',
+    fontWeight: '500',
+  },
+  noEventsContainer: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+  },
+  noEventsText: {
+    fontSize: 16,
+    color: '#999',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  browseEventsText: {
+    fontSize: 14,
+    color: '#8B0000',
+    fontWeight: '600',
   },
   activityItem: {
     flexDirection: 'row',

@@ -1,22 +1,39 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { sql } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import bloodRoutes from './routes/bloodRoutes.js';
 import communityRoutes from './routes/communityRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import donorRoutes from './routes/donorRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 dotenv.config(); // ← moved to top so .env loads before anything uses it
 
 const app = express();
 
+// Make sure the uploads directory exists
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsDir = path.join(__dirname, 'uploads');
+const eventsUploadsDir = path.join(uploadsDir, 'events');
+fs.mkdirSync(eventsUploadsDir, { recursive: true });
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Static file hosting for uploaded images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Routes
 app.use('/api/donors', donorRoutes);
+app.use('/api/upload', uploadRoutes);
 
 const PORT = process.env.PORT || 9000;
 

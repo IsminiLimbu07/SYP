@@ -23,6 +23,10 @@ export default function FindDonorsScreen({ navigation }) {
         setLoading(true);
         setError(null);
         const token = await AsyncStorage.getItem('userToken');
+        if (!token) {
+          setError('Not authenticated. Please login to view donors.');
+          return;
+        }
         const response = await fetch(apiConfig.ENDPOINTS.DONORS.GET_ALL, {
           headers: {
             'Authorization': `Bearer ${token}`,

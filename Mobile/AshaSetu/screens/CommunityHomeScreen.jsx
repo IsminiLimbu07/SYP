@@ -20,6 +20,14 @@ import { apiConfig } from '../config/api';
 // So we just use it directly — no modification needed
 const BASE = apiConfig.BASE_URL;
 
+const getFullImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  const base = apiConfig.BASE_URL.replace(/\/api\/?$/, '');
+  if (url.startsWith('/')) return `${base}${url}`;
+  return `${base}/${url}`;
+};
+
 export default function CommunityHomeScreen({ navigation }) {
   const { token, user } = useContext(AuthContext);
   const [events, setEvents]                     = useState([]);
@@ -30,10 +38,11 @@ export default function CommunityHomeScreen({ navigation }) {
   const [registeringId, setRegisteringId]       = useState(null);
 
   useEffect(() => {
+    if (!token) return;
     loadData();
     const unsub = navigation.addListener('focus', loadData);
     return unsub;
-  }, [navigation]);
+  }, [navigation, token, user?.profile?.city]);
 
   const loadData = async () => {
     await Promise.all([loadEvents(), fetchMyStatus()]);
@@ -42,7 +51,11 @@ export default function CommunityHomeScreen({ navigation }) {
   // GET https://ngrok/api/community/events
   const loadEvents = async () => {
     try {
-      const url = `${BASE}/community/events?status=upcoming`;
+      const city = user?.profile?.city || user?.city || '';
+      const params = new URLSearchParams({ status: 'upcoming' });
+      if (city) params.append('city', city);
+
+      const url = `${BASE}/community/events?${params.toString()}`;
       console.log('[Community] loadEvents ->', url);
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -289,9 +302,14 @@ export default function CommunityHomeScreen({ navigation }) {
             const isRegistering = registeringId === event.event_id;
 
             return (
-              <View key={event.event_id} style={styles.eventCard}>
+              <TouchableOpacity
+                key={event.event_id}
+                style={styles.eventCard}
+                activeOpacity={0.9}
+                onPress={() => navigation.navigate('EventDetails', { eventId: event.event_id })}
+              >
                 {event.image_url ? (
-                  <Image source={{ uri: event.image_url }} style={styles.eventImage} />
+                  <Image source={{ uri: getFullImageUrl(event.image_url) }} style={styles.eventImage} />
                 ) : (
                   <View style={styles.eventImagePlaceholder}>
                     <MaterialCommunityIcons name="water" size={48} color="#8B0000" style={{ opacity: 0.25 }} />
@@ -375,7 +393,7 @@ export default function CommunityHomeScreen({ navigation }) {
                     )}
                   </TouchableOpacity>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })
         )}

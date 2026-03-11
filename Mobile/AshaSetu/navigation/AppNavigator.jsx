@@ -27,6 +27,8 @@ import MyDonationResponseScreen from '../screens/MyDonationResponseScreen';
 // ── Community Screens ──
 import CommunityHomeScreen from '../screens/CommunityHomeScreen';
 import CommunityChatroomScreen from '../screens/CommunityChatRoomScreen';
+import CreateEventScreen from '../screens/CreateEventScreen';
+import EventDetailsScreen from '../screens/EventDetailsScreen';
 
 export const linking = {
   prefixes: [
@@ -144,6 +146,16 @@ const AppNavigator = () => {
           <Stack.Screen
             name="Community"
             component={CommunityHomeScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CreateEvent"
+            component={CreateEventScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="EventDetails"
+            component={EventDetailsScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen

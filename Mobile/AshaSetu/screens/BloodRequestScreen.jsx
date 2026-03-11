@@ -38,6 +38,12 @@ export default function BloodRequestScreen({ navigation }) {
   const urgencyLevels = ['critical', 'urgent', 'normal'];
 
   const handleSubmit = async () => {
+    // Ensure we have a valid auth token before making requests
+    if (!token) {
+      Alert.alert('Session expired', 'Please login again to create a blood request.');
+      return;
+    }
+
     // Validation
     if (!patientName.trim()) {
       Alert.alert('Error', 'Please enter patient name');
