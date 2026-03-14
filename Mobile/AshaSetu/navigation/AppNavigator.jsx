@@ -3,7 +3,7 @@ import React, { useContext } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
-import VerifyEmailScreen from '../screens/VerifyEmailScreen'; // ← fixed: capital V and E
+import VerifyEmailScreen from '../screens/VerifyEmailScreen';
 
 // ── Auth Screens ──
 import LoginScreen from '../screens/LoginScreen';
@@ -30,6 +30,10 @@ import CommunityChatroomScreen from '../screens/CommunityChatRoomScreen';
 import CreateEventScreen from '../screens/CreateEventScreen';
 import EventDetailsScreen from '../screens/EventDetailsScreen';
 
+// ── Campaign Screens (NEW) ──
+import CreateCampaignScreen from '../screens/CreateCampaignScreen';
+import CampaignDetailsScreen from '../screens/CampaignDetailsScreen';
+
 export const linking = {
   prefixes: [
     'ashasetu://',
@@ -44,7 +48,6 @@ export const linking = {
 
 const Stack = createNativeStackNavigator();
 
-// Shared dark-red header style
 const darkRedHeader = {
   headerStyle: { backgroundColor: '#8B0000' },
   headerTintColor: '#fff',
@@ -65,127 +68,40 @@ const AppNavigator = () => {
   return (
     <Stack.Navigator>
       {user ? (
-        // ══════════════════════════════════════
-        // Authenticated Stack
-        // ══════════════════════════════════════
         <>
-          {/* Home — no header (custom header inside screen) */}
-          <Stack.Screen
-            name="Home"
-            component={HomeScreen}
-            options={{ headerShown: false }}
-          />
+          <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
 
-          {/* Profile */}
-          <Stack.Screen
-            name="Profile"
-            component={ProfileScreen}
-            options={{ title: 'My Profile', ...darkRedHeader }}
-          />
-          <Stack.Screen
-            name="EditProfile"
-            component={EditProfileScreen}
-            options={{ title: 'Edit Profile', ...darkRedHeader }}
-          />
-          <Stack.Screen
-            name="ChangePassword"
-            component={ChangePasswordScreen}
-            options={{ title: 'Change Password', ...darkRedHeader }}
-          />
+          <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile', ...darkRedHeader }} />
+          <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile', ...darkRedHeader }} />
+          <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Change Password', ...darkRedHeader }} />
 
-          {/* Blood / Donors */}
-          <Stack.Screen
-            name="FindDonor"
-            component={FindDonorsScreen}
-            options={{ title: 'Find Donors', ...darkRedHeader }}
-          />
-          <Stack.Screen
-            name="BloodRequest"
-            component={BloodRequestScreen}
-            options={{ title: 'Blood Request', ...darkRedHeader }}
-          />
-          <Stack.Screen
-            name="BloodRequestsFeed"
-            component={BloodRequestsFeedScreen}
-            options={{ title: 'Blood Requests', ...darkRedHeader }}
-          />
-          <Stack.Screen
-            name="RespondToRequest"
-            component={RespondToRequestScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="ManageResponses"
-            component={ManageResponseScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="MyDonationResponses"
-            component={MyDonationResponseScreen}
-            options={{ headerShown: false }}
-          />
+          <Stack.Screen name="FindDonor" component={FindDonorsScreen} options={{ title: 'Find Donors', ...darkRedHeader }} />
+          <Stack.Screen name="BloodRequest" component={BloodRequestScreen} options={{ title: 'Blood Request', ...darkRedHeader }} />
+          <Stack.Screen name="BloodRequestsFeed" component={BloodRequestsFeedScreen} options={{ title: 'Blood Requests', ...darkRedHeader }} />
+          <Stack.Screen name="RespondToRequest" component={RespondToRequestScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ManageResponses" component={ManageResponseScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="MyDonationResponses" component={MyDonationResponseScreen} options={{ headerShown: false }} />
 
-          {/* Utilities */}
-          <Stack.Screen
-            name="Ambulance"
-            component={AmbulanceScreen}
-            options={{ title: 'Ambulance Services', ...darkRedHeader }}
-          />
-          <Stack.Screen
-            name="FirstAid"
-            component={FirstAidScreen}
-            options={{ title: 'First Aid', ...darkRedHeader }}
-          />
-          <Stack.Screen
-            name="Donation"
-            component={DonationScreen}
-            options={{ title: 'Medical Fundraising', ...darkRedHeader }}
-          />
+          <Stack.Screen name="Ambulance" component={AmbulanceScreen} options={{ title: 'Ambulance Services', ...darkRedHeader }} />
+          <Stack.Screen name="FirstAid" component={FirstAidScreen} options={{ title: 'First Aid', ...darkRedHeader }} />
+
+          {/* Donation / Campaigns */}
+          <Stack.Screen name="Donation" component={DonationScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="CreateCampaign" component={CreateCampaignScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="CampaignDetails" component={CampaignDetailsScreen} options={{ headerShown: false }} />
 
           {/* Community */}
-          <Stack.Screen
-            name="Community"
-            component={CommunityHomeScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="CreateEvent"
-            component={CreateEventScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="EventDetails"
-            component={EventDetailsScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="CommunityChatroom"
-            component={CommunityChatroomScreen}
-            options={{ headerShown: false }}
-          />
+          <Stack.Screen name="Community" component={CommunityHomeScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="EventDetails" component={EventDetailsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="CommunityChatroom" component={CommunityChatroomScreen} options={{ headerShown: false }} />
 
-          {/* ← FIXED: VerifyEmail is now INSIDE the authenticated <> fragment */}
-          <Stack.Screen
-            name="VerifyEmail"
-            component={VerifyEmailScreen}
-            options={{ title: 'Verify Email', ...darkRedHeader }}
-          />
+          <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ title: 'Verify Email', ...darkRedHeader }} />
         </>
       ) : (
-        // ══════════════════════════════════════
-        // Guest / Unauthenticated Stack
-        // ══════════════════════════════════════
         <>
-          <Stack.Screen
-            name="Login"
-            component={LoginScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="Register"
-            component={RegisterScreen}
-            options={{ title: 'Register', ...darkRedHeader }}
-          />
+          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register', ...darkRedHeader }} />
         </>
       )}
     </Stack.Navigator>

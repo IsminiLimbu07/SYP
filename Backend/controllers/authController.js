@@ -383,8 +383,8 @@ export const sendVerificationEmail = async (req, res) => {
         console.log('========== ENV DEBUG START ==========');
         console.log('1. Current directory:', process.cwd());
         console.log('2. All env keys:', Object.keys(process.env));
-        console.log('3. NGROK_URL value:', process.env.NGROK_URL);
-        console.log('4. EMAIL_USER value:', process.env.EMAIL_USER);
+        // console.log('3. NGROK_URL value:', process.env.NGROK_URL);
+        console.log('3. EMAIL_USER value:', process.env.EMAIL_USER);
         console.log('5. JWT_SECRET exists:', !!process.env.JWT_SECRET);
         console.log('========== ENV DEBUG END ==========');
 
@@ -416,9 +416,10 @@ export const sendVerificationEmail = async (req, res) => {
             WHERE user_id = ${user.user_id}
         `;
 
-        // HARDCODE THE URL (temporary fix)
-        const NGROK_URL = 'https://malachi-inconvertible-lita.ngrok-free.dev';
-        const verificationUrl = `${NGROK_URL}/api/auth/verify-email?token=${token}&userId=${user.user_id}&ngrok-skip-browser-warning=true`;
+        // Use ngrok URL for verification link (commented local IP for now)
+        const NGROK_URL = process.env.NGROK_URL || 'https://malachi-inconvertible-lita.ngrok-free.dev';
+        // const BASE_URL = process.env.BASE_URL || 'http://192.168.1.4:9000';
+        const verificationUrl = `${NGROK_URL}/api/auth/verify-email?token=${token}&userId=${user.user_id}`;
         
         console.log('✅ Verification URL being sent:', verificationUrl);
 
@@ -473,7 +474,6 @@ export const sendVerificationEmail = async (req, res) => {
 
 // ─── Verify email via link click ──────────────────────────────────────────────
 export const verifyEmail = async (req, res) => {
-    res.setHeader('ngrok-skip-browser-warning', 'true');
     try {
         const { token, userId } = req.query;
 

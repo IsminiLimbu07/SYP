@@ -17,8 +17,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { apiConfig } from '../config/api';
 
-// apiConfig.BASE_URL is already "https://ngrok-url/api"
-// So we just use it directly — no modification needed
+// apiConfig.BASE_URL is already set to the backend API base URL.
+// Use it to build request URLs.
 const BASE = apiConfig.BASE_URL;
 
 export default function CommunityChatroomScreen({ navigation, route }) {
@@ -42,7 +42,7 @@ export default function CommunityChatroomScreen({ navigation, route }) {
     };
   }, []);
 
-  // GET https://ngrok/api/chat/messages
+  // GET <API_BASE>/chat/messages
   const loadMessages = async () => {
     if (sendingRef.current) return; // don't overwrite optimistic messages mid-send
     try {
@@ -62,7 +62,7 @@ export default function CommunityChatroomScreen({ navigation, route }) {
     }
   };
 
-  // POST https://ngrok/api/chat/send
+  // POST <API_BASE>/chat/send
   const sendMessage = async () => {
     const text = messageText.trim();
     if (!text) return;
@@ -124,7 +124,7 @@ export default function CommunityChatroomScreen({ navigation, route }) {
     }
   };
 
-  // DELETE https://ngrok/api/chat/messages/:id  (long press own message)
+  // DELETE <API_BASE>/chat/messages/:id  (long press own message)
   const handleDeleteMessage = (messageId) => {
     Alert.alert('Delete Message', 'Delete this message?', [
       { text: 'Cancel', style: 'cancel' },

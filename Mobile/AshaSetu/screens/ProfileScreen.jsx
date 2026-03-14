@@ -11,9 +11,9 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
-import { sendVerificationEmail } from '../api/auth';
+import { getProfile, sendVerificationEmail } from '../api/auth';
 
-const NGROK_URL = 'https://malachi-inconvertible-lita.ngrok-free.dev';
+// apiConfig already targets your backend IP; no tunneling needed.
 
 const ProfileScreen = ({ navigation, route }) => {
   const { user, token, logout, updateUser } = useContext(AuthContext); // ← single clean destructure
@@ -50,11 +50,9 @@ const ProfileScreen = ({ navigation, route }) => {
 
   const handleRefreshVerification = async () => {
     try {
-      const response = await fetch(`${NGROK_URL}/api/auth/profile`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.success && data.data.is_verified) {
+      const { success, user: updatedUser } = await getProfile(token);
+
+      if (success && updatedUser?.is_verified) {
         await updateUser({ ...user, is_verified: true });
         Alert.alert('Verified! ✅', 'Your email has been verified successfully!');
       } else {

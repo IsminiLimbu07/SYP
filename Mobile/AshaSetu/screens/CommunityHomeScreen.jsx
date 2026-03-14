@@ -16,8 +16,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { apiConfig } from '../config/api';
 
-// apiConfig.BASE_URL is already "https://ngrok-url/api"
-// So we just use it directly — no modification needed
+// apiConfig.BASE_URL is already set to your backend API base URL
+// (e.g., http://192.168.1.4:9000/api)
 const BASE = apiConfig.BASE_URL;
 
 const getFullImageUrl = (url) => {
@@ -48,7 +48,7 @@ export default function CommunityHomeScreen({ navigation }) {
     await Promise.all([loadEvents(), fetchMyStatus()]);
   };
 
-  // GET https://ngrok/api/community/events
+  // GET <API_BASE>/community/events
   const loadEvents = async () => {
     try {
       const city = user?.profile?.city || user?.city || '';
@@ -71,7 +71,7 @@ export default function CommunityHomeScreen({ navigation }) {
     }
   };
 
-  // GET https://ngrok/api/community/my-status
+  // GET <API_BASE>/community/my-status
   const fetchMyStatus = async () => {
     try {
       const url = `${BASE}/community/my-status`;
@@ -90,7 +90,7 @@ export default function CommunityHomeScreen({ navigation }) {
     }
   };
 
-  // POST https://ngrok/api/community/become-volunteer
+  // POST <API_BASE>/community/become-volunteer
   const handleBecomeVolunteer = () => {
     Alert.alert(
       'Become a Volunteer',
@@ -134,7 +134,7 @@ export default function CommunityHomeScreen({ navigation }) {
     );
   };
 
-  // POST / DELETE https://ngrok/api/community/events/:id/register
+  // POST / DELETE <API_BASE>/community/events/:id/register
   const handleRegister = async (eventId) => {
     setRegisteringId(eventId);
     const alreadyRegistered = registeredEvents[eventId];

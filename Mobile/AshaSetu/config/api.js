@@ -1,9 +1,15 @@
-// ✅ USE NGROK URL
-const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev' ; // 👈 PASTE YOUR NGROK URL
+// Previously used ngrok tunnel URL (kept here for reference):
+const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
 
+// Local IP configuration (commented out while using ngrok)
+// const API_BASE_URL = 'http://192.168.1.4:9000/api';
+// const SERVER_BASE_URL = 'http://192.168.1.4:9000';
+
+// Use ngrok for tunneling during development
 const API_BASE_URL = `${NGROK_URL}/api`;
+const SERVER_BASE_URL = NGROK_URL;
 
-// API Configuration
+// API Configurationr
 export const apiConfig = {
   BASE_URL: API_BASE_URL,
   ENDPOINTS: {
@@ -42,12 +48,19 @@ export const makeRequest = async (url, options = {}) => {
 
     console.log('📊 API Response Status:', response.status);
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      const text = await response.text();
+      console.warn('⚠️ Failed to parse JSON response, fallback to text:', text);
+      data = { success: false, message: text || parseError.message };
+    }
 
     console.log('✅ API Response Data:', data);
 
     if (!response.ok) {
-      const errorMsg = data.message || `HTTP error! status: ${response.status}`;
+      const errorMsg = (data && data.message) || `HTTP error! status: ${response.status}`;
       console.error('❌ API Error:', errorMsg);
       throw new Error(errorMsg);
     }
@@ -62,8 +75,8 @@ export const makeRequest = async (url, options = {}) => {
       throw new Error(
         'Cannot reach server. Make sure:\n' +
         '1. Backend is running\n' +
-        '2. Ngrok is running\n' +
-        '3. Ngrok URL is correct in api.js'
+        '2. Ngrok is running and the tunnel URL is correct\n' +
+        '3. Your mobile device/emulator can access the ngrok URL'
       );
     }
     
@@ -74,7 +87,7 @@ export const makeRequest = async (url, options = {}) => {
 // Connection test function
 export const testConnection = async () => {
   try {
-    const response = await fetch(`${NGROK_URL}/`, {
+const response = await fetch(`${SERVER_BASE_URL}/`, {
       method: 'GET',
     });
     

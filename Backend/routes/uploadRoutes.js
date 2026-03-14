@@ -58,7 +58,7 @@ router.post('/event-image', authenticateToken, upload.single('image'), async (re
 
     // Construct image URL
     // In production, this should be your actual domain
-    // For development with ngrok: https://your-ngrok-url.ngrok-free.dev/uploads/events/filename.jpg
+    // For development on the same LAN: http://<your-ip>:<port>/uploads/events/filename.jpg
     const imageUrl = `/uploads/events/${req.file.filename}`;
 
     return res.status(200).json({

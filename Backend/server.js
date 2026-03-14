@@ -11,6 +11,8 @@ import communityRoutes from './routes/communityRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import donorRoutes from './routes/donorRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import campaignRoutes from './routes/campaignRoutes.js';
+
 
 dotenv.config(); // ← moved to top so .env loads before anything uses it
 
@@ -27,6 +29,7 @@ fs.mkdirSync(eventsUploadsDir, { recursive: true });
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/api/campaigns', campaignRoutes);
 
 // Static file hosting for uploaded images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -276,6 +279,46 @@ async function initDB() {
 
         console.log('✅ All indexes created\n');
 
+  // ==================== CREATE Campaign  ====================
+        await sql`
+    CREATE TABLE IF NOT EXISTS campaigns (
+        campaign_id SERIAL PRIMARY KEY,
+        creator_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+        patient_name VARCHAR(255) NOT NULL,
+        age INTEGER,
+        condition VARCHAR(255) NOT NULL,
+        hospital_name VARCHAR(255) NOT NULL,
+        city VARCHAR(100) NOT NULL,
+        target_amount INTEGER NOT NULL CHECK (target_amount >= 1000),
+        deadline DATE NOT NULL,
+        story TEXT NOT NULL,
+        image_url TEXT,
+        verified BOOLEAN DEFAULT false,
+        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'fulfilled', 'cancelled')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+`;
+console.log('✅ Created campaigns table');
+
+        await sql`
+            CREATE TABLE IF NOT EXISTS campaign_donations (
+                donation_id SERIAL PRIMARY KEY,
+                campaign_id INTEGER REFERENCES campaigns(campaign_id) ON DELETE CASCADE,
+                donor_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+                donor_name VARCHAR(255),
+                amount INTEGER NOT NULL CHECK (amount >= 10),
+                status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
+                transaction_id VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `;
+        console.log('✅ Created campaign_donations table');
+
+        await sql`CREATE INDEX IF NOT EXISTS idx_campaigns_creator ON campaigns(creator_id)`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status)`;
+        await sql`CREATE INDEX IF NOT EXISTS idx_campaign_donations_campaign ON campaign_donations(campaign_id)`;
+
         // ========== VERIFY COLUMNS EXIST ==========
         console.log('🔍 Verifying database structure...');
         
@@ -379,9 +422,9 @@ app.use((req, res) => {
 initDB().then(() => {
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on port ${PORT}`);
+        // console.log(`📲 Ngrok URL: https://tularaemic-electroneutral-ozella.ngrok-free.dev`); // kept for reference
         console.log(`📍 API Base URL: http://0.0.0.0:${PORT}`);
         console.log(`🏥 Health check: http://localhost:${PORT}/`);
-        console.log(`📲 Ngrok URL: https://malachi-inconvertible-lita.ngrok-free.dev`);
         console.log(`✨ Community features enabled!`);
         console.log(`\n🎯 Ready to accept requests!\n`);
     });

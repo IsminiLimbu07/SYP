@@ -257,8 +257,8 @@ export const loginUser = async (credentials) => {
 **File:** `config/api.js`
 
 ```javascript
-const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
-const API_BASE_URL = `${NGROK_URL}/api`;
+// Update this to your development machine's local IP if needed
+const API_BASE_URL = 'http://192.168.1.4:9000/api';
 
 export const apiConfig = {
   BASE_URL: API_BASE_URL,
@@ -274,7 +274,7 @@ export const apiConfig = {
 };
 ```
 
-**Backend Server:** `Backend/server.js` (Port 9000, tunneled via Ngrok)
+**Backend Server:** `Backend/server.js` (Port 9000, accessible on your local network)
 
 ---
 
@@ -700,13 +700,13 @@ navigation.navigate('Ambulance');
 |-----------|---------|-------|
 | **Node.js** | Runtime | Server-side execution |
 | **Express.js** | Web framework | API endpoints |
-| **Ngrok** | Tunneling | Expose local backend to mobile app |
+| **Local Network (LAN)** | Local access | Access backend from device/emulator via local IP |
 | **JWT** | Authentication | Token-based auth |
 | **MongoDB** (assumed) | Database | Data persistence |
 
 ### API Endpoints
 
-**Base URL:** `https://tularaemic-electroneutral-ozella.ngrok-free.dev/api`
+**Base URL:** `http://192.168.1.4:9000/api` (update to match your machine IP)
 
 #### Auth Endpoints
 | Method | Endpoint | Body | Response |
@@ -825,7 +825,7 @@ Location services are integrated through expo-location, providing GPS coordinate
 The entire system flows through:
 1. **Authentication** (Controlled by AuthContext)
 2. **Navigation** (Conditional stack rendering)
-3. **API Communication** (Ngrok-tunneled backend)
+3. **API Communication** (Local backend on LAN)
 4. **Location Services** (GPS-based features)
 5. **User Interaction** (Screens with business logic)
 

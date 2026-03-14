@@ -139,16 +139,18 @@ If you deploy backend to cloud (AWS, Heroku, etc.):
 - You can register/login from **anywhere**
 - No need to manage local network
 
-### Tip 2: Use ngrok for Testing
-Temporarily expose your local backend to internet:
+### Tip 2: Use Local Network IP for Testing
+When testing on a device/emulator on the same Wi‑Fi network, use your machine's local IP address.
+
+Example (replace with your actual IP):
 ```bash
-ngrok http 9000
-# Gives you a public URL like: https://abc123.ngrok.io
+# Your backend runs on port 9000
+# Your machine's local IP might be 192.168.1.4
 ```
 
-Update production URL in `server-config.js`:
+Update your mobile config (e.g., `config/api.js`):
 ```javascript
-url: 'https://abc123.ngrok.io/api'
+const API_BASE_URL = 'http://192.168.1.4:9000/api';
 ```
 
 ### Tip 3: Use Environment Variables
