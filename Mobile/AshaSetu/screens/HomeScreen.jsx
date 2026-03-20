@@ -1,4 +1,4 @@
-// frontend/src/screens/HomeScreen.jsx
+// Mobile/AshaSetu/screens/HomeScreen.jsx
 import React, { useContext, useState, useEffect } from 'react';
 import {
   View,
@@ -8,7 +8,6 @@ import {
   ScrollView,
   SafeAreaView,
   Image,
-  FlatList,
   ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons, FontAwesome5, FontAwesome } from '@expo/vector-icons';
@@ -18,101 +17,43 @@ import { apiConfig } from '../config/api';
 const HomeScreen = ({ navigation }) => {
   const { user, token } = useContext(AuthContext);
   const [bloodRequests, setBloodRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [nearbyEvents, setNearbyEvents] = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [nearbyEvents, setNearbyEvents]   = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
-
-  const quickActions = [
-    {
-      id: '1',
-      title: 'Find Blood Donors',
-      icon: '🩸',
-      color: '#FFE5E5',
-      action: () => console.log('Find Donors'),
-      description: 'Search for nearby donors'
-    },
-    {
-      id: '2',
-      title: 'Request Blood',
-      icon: '🏥',
-      color: '#FFF4E5',
-      action: () => console.log('Request Blood'),
-      description: 'Create a blood request'
-    },
-    {
-      id: '3',
-      title: 'Donate Blood',
-      icon: '❤️',
-      color: '#E5F5FF',
-      action: () => console.log('Donate Blood'),
-      description: 'Register as a donor'
-    },
-    {
-      id: '4',
-      title: 'Volunteer',
-      icon: '🤝',
-      color: '#E5FFE5',
-      action: () => console.log('Volunteer'),
-      description: 'Join our team'
-    }
-  ];
+  const [unreadCount, setUnreadCount]     = useState(0);  // ← notification badge
 
   const recentActivities = [
-    {
-      id: '1',
-      title: 'Blood Request Created',
-      time: '2 days ago',
-      type: 'request'
-    },
-    {
-      id: '2',
-      title: 'Profile Completed',
-      time: '1 week ago',
-      type: 'profile'
-    }
+    { id: '1', title: 'Blood Request Created', time: '2 days ago',  type: 'request' },
+    { id: '2', title: 'Profile Completed',     time: '1 week ago',  type: 'profile' },
   ];
 
-  const handleProfilePress = () => {
-    navigation.navigate('Profile');
-  };
-
   useEffect(() => {
-    // Prevent making API calls until the auth token is available
     if (!token) return;
-
-    // Fetch initially and whenever the screen gains focus so new requests appear
     fetchBloodRequests();
     fetchNearbyEvents();
+    fetchUnreadCount();          // ← fetch notification count on mount
+
     const unsubscribe = navigation.addListener('focus', () => {
       fetchBloodRequests();
       fetchNearbyEvents();
+      fetchUnreadCount();        // ← refresh badge when returning to home
     });
     return unsubscribe;
-  }, [navigation, token, user?.profile?.city]);
+  }, [navigation, token]);
 
+  // ── Blood requests ──────────────────────────────────────────────────────────
   const fetchBloodRequests = async () => {
     try {
       setLoading(true);
-      const url = `${apiConfig.BASE_URL}/blood/requests`;
-      console.log('Fetching blood requests from:', url);
-      
-      const response = await fetch(url, {
-        method: 'GET',
+      const response = await fetch(`${apiConfig.BASE_URL}/blood/requests`, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
-
       const data = await response.json();
-      console.log('Blood requests response:', data);
-
       if (response.ok && data.success) {
-        // Only show strictly critical requests on Home emergency card
-        const criticalRequests = data.data.filter(req => req.urgency_level === 'critical');
-        setBloodRequests(criticalRequests);
-      } else {
-        console.log('Failed to fetch blood requests:', data.message);
+        setBloodRequests(data.data.filter(r => r.urgency_level === 'critical'));
       }
     } catch (error) {
       console.error('Error fetching blood requests:', error);
@@ -121,58 +62,58 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  // ── Notification unread count ───────────────────────────────────────────────
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await fetch(`${apiConfig.BASE_URL}/notifications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setUnreadCount(data.data?.length || 0);
+      }
+    } catch {
+      // silent fail — badge simply stays at 0
+    }
+  };
+
+  // ── Nearby events ───────────────────────────────────────────────────────────
   const getFullImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
     const base = apiConfig.BASE_URL.replace(/\/api\/?$/, '');
-    if (url.startsWith('/')) return `${base}${url}`;
-    return `${base}/${url}`;
+    return url.startsWith('/') ? `${base}${url}` : `${base}/${url}`;
   };
 
   const fetchNearbyEvents = async () => {
     try {
       setLoadingEvents(true);
-      const city = user?.profile?.city || user?.city || '';
-
-      const buildUrl = (params) => {
-        const query = new URLSearchParams(params).toString();
-        return `${apiConfig.BASE_URL}/community/events?${query}`;
-      };
-
+      const city       = user?.profile?.city || user?.city || '';
       const baseParams = { status: 'upcoming', limit: 5 };
       if (city) baseParams.city = city;
 
-      const response = await fetch(buildUrl(baseParams), {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+      const buildUrl = (p) =>
+        `${apiConfig.BASE_URL}/community/events?${new URLSearchParams(p)}`;
+
+      const resp = await fetch(buildUrl(baseParams), {
+        headers: { Authorization: `Bearer ${token}` },
       });
+      const data = await resp.json();
+      let events = data.success ? data.data || [] : [];
 
-      const data = await response.json();
-
-      let events = [];
-      if (data.success) {
-        events = data.data || [];
-      }
-
-      // If user has a city, try to top up with other upcoming events so we always show at least 5
+      // top-up with non-city events if needed
       if (city && events.length < 5) {
-        const responseAll = await fetch(buildUrl({ status: 'upcoming', limit: 5 }), {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
+        const resp2 = await fetch(buildUrl({ status: 'upcoming', limit: 5 }), {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        const allData = await responseAll.json();
-        if (allData.success) {
-          const additional = (allData.data || []).filter(
-            (e) => !events.some((existing) => existing.event_id === e.event_id)
+        const data2 = await resp2.json();
+        if (data2.success) {
+          const extra = (data2.data || []).filter(
+            e => !events.some(ex => ex.event_id === e.event_id)
           );
-          events = [...events, ...additional].slice(0, 5);
+          events = [...events, ...extra].slice(0, 5);
         }
       }
-
       setNearbyEvents(events);
     } catch (error) {
       console.error('Error fetching nearby events:', error);
@@ -183,11 +124,9 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header with User Info */}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+
+        {/* ── Header ── */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Text style={styles.greeting}>Welcome back,</Text>
@@ -195,18 +134,46 @@ const HomeScreen = ({ navigation }) => {
               {user?.full_name?.split(' ')[0] || 'User'}! 👋
             </Text>
           </View>
-          
-          {/* Header Actions */}
+
           <View style={styles.headerActions}>
-            <TouchableOpacity 
-              style={styles.myOffersButton}
+
+            {/* 🔔 Notification Bell */}
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => navigation.navigate('Notifications')}
+            >
+              <MaterialCommunityIcons name="bell-outline" size={24} color="#fff" />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* My donation offers */}
+            <TouchableOpacity
+              style={styles.iconButton}
               onPress={() => navigation.navigate('MyDonationResponses')}
             >
               <MaterialCommunityIcons name="hand-heart-outline" size={24} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity 
+
+            {/* Admin dashboard shortcut (only visible to admins) */}
+            {user?.is_admin && (
+              <TouchableOpacity
+                style={[styles.iconButton, styles.adminIconButton]}
+                onPress={() => navigation.navigate('AdminDashboard')}
+              >
+                <MaterialCommunityIcons name="shield-crown-outline" size={22} color="#FFD700" />
+              </TouchableOpacity>
+            )}
+
+            {/* Profile avatar */}
+            <TouchableOpacity
               style={styles.profileButton}
-              onPress={handleProfilePress}
+              onPress={() => navigation.navigate('Profile')}
             >
               <View style={styles.avatarSmall}>
                 <Text style={styles.avatarTextSmall}>
@@ -217,9 +184,9 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* COMPACT Emergency Blood Request Card - Shows only most recent */}
+        {/* ── Emergency Blood Request Card ── */}
         {loading ? (
-          <View style={[styles.emergencyCard, { justifyContent: 'center', alignItems: 'center', minHeight: 120 }]}>
+          <View style={[styles.emergencyCard, styles.centered]}>
             <ActivityIndicator size="large" color="#fff" />
           </View>
         ) : bloodRequests.length > 0 ? (
@@ -228,10 +195,13 @@ const HomeScreen = ({ navigation }) => {
               <View style={{ flex: 1 }}>
                 <Text style={styles.emergencyTitle}>🚨 Emergency Blood Request</Text>
                 {bloodRequests.length > 1 && (
-                  <Text style={styles.emergencyCount}>+{bloodRequests.length - 1} more critical request{bloodRequests.length - 1 > 1 ? 's' : ''}</Text>
+                  <Text style={styles.emergencyCount}>
+                    +{bloodRequests.length - 1} more critical request
+                    {bloodRequests.length - 1 > 1 ? 's' : ''}
+                  </Text>
                 )}
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.viewAllButtonCompact}
                 onPress={() => navigation.navigate('BloodRequestsFeed')}
               >
@@ -240,11 +210,12 @@ const HomeScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            {/* Show only the most recent request - COMPACT DESIGN */}
             <View style={styles.requestDetails}>
               <View style={styles.compactRow}>
                 <View style={styles.compactLeft}>
-                  <Text style={styles.patientNameLarge}>{bloodRequests[0].patient_name}</Text>
+                  <Text style={styles.patientNameLarge}>
+                    {bloodRequests[0].patient_name}
+                  </Text>
                   <View style={styles.compactInfo}>
                     <MaterialCommunityIcons name="map-marker" size={14} color="rgba(255,255,255,0.9)" />
                     <Text style={styles.compactText}>{bloodRequests[0].hospital_city}</Text>
@@ -272,58 +243,47 @@ const HomeScreen = ({ navigation }) => {
               </View>
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.respondButton}
-              onPress={() => navigation.navigate('RespondToRequest', { request: bloodRequests[0] })}
+              onPress={() =>
+                navigation.navigate('RespondToRequest', { request: bloodRequests[0] })
+              }
             >
               <MaterialCommunityIcons name="hand-heart" size={20} color="#8B0000" />
               <Text style={styles.respondButtonText}>I Can Help</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={[styles.emergencyCard, { justifyContent: 'center', alignItems: 'center', minHeight: 120 }]}>
+          <View style={[styles.emergencyCard, styles.centered, { minHeight: 120 }]}>
             <MaterialCommunityIcons name="heart-pulse" size={48} color="rgba(255,255,255,0.3)" />
             <Text style={styles.noRequestText}>No emergency requests at the moment</Text>
           </View>
         )}
 
-
-        {/* Action Grid */}
+        {/* ── Action Grid ── */}
         <View style={styles.actionGrid}>
-          <TouchableOpacity 
-            style={styles.actionCard}
-            onPress={() => navigation.navigate('FindDonor')}
-          >
+          <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('FindDonor')}>
             <View style={styles.actionIconContainer}>
               <MaterialCommunityIcons name="account-group" size={28} color="#8B0000" />
             </View>
             <Text style={styles.actionLabel}>Find Donors</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.actionCard}
-            onPress={() => navigation.navigate('BloodRequestsFeed')}
-          >
+          <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('BloodRequestsFeed')}>
             <View style={styles.actionIconContainer}>
               <FontAwesome5 name="tint" size={24} color="#DC143C" />
             </View>
             <Text style={styles.actionLabel}>Blood Request</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.actionCard}
-            onPress={() => navigation.navigate('Ambulance')}
-          >
+          <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Ambulance')}>
             <View style={styles.actionIconContainer}>
               <FontAwesome name="ambulance" size={26} color="#8B0000" />
             </View>
             <Text style={styles.actionLabel}>Ambulance</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.actionCard}
-            onPress={() => navigation.navigate('FirstAid')}
-          >
+          <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('FirstAid')}>
             <View style={styles.actionIconContainer}>
               <FontAwesome5 name="first-aid" size={24} color="#DC143C" />
             </View>
@@ -331,7 +291,7 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Nearby Events */}
+        {/* ── Nearby Events ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>📅 Nearby Events</Text>
@@ -348,15 +308,17 @@ const HomeScreen = ({ navigation }) => {
           ) : nearbyEvents.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {nearbyEvents.map((event) => {
-                const eventDate = new Date(event.event_date);
-                const today = new Date();
-                const daysUntil = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
-                
+                const eventDate  = new Date(event.event_date);
+                const today      = new Date();
+                const daysUntil  = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
+
                 return (
                   <TouchableOpacity
                     key={event.event_id}
                     style={styles.eventCard}
-                    onPress={() => navigation.navigate('EventDetails', { eventId: event.event_id })}
+                    onPress={() =>
+                      navigation.navigate('EventDetails', { eventId: event.event_id })
+                    }
                   >
                     {event.image_url ? (
                       <Image
@@ -368,43 +330,28 @@ const HomeScreen = ({ navigation }) => {
                         <MaterialCommunityIcons name="calendar-heart" size={40} color="#DDD" />
                       </View>
                     )}
-                    
-                    {/* Days Until Badge */}
-                    {daysUntil === 0 ? (
-                      <View style={[styles.eventBadge, { backgroundColor: '#FF5252' }]}>
-                        <Text style={styles.eventBadgeText}>TODAY</Text>
-                      </View>
-                    ) : daysUntil === 1 ? (
-                      <View style={[styles.eventBadge, { backgroundColor: '#FF9800' }]}>
-                        <Text style={styles.eventBadgeText}>TOMORROW</Text>
-                      </View>
-                    ) : (
-                      <View style={[styles.eventBadge, { backgroundColor: '#4CAF50' }]}>
-                        <Text style={styles.eventBadgeText}>{daysUntil}D</Text>
-                      </View>
-                    )}
+
+                    <View style={[
+                      styles.eventBadge,
+                      { backgroundColor: daysUntil === 0 ? '#FF5252' : daysUntil === 1 ? '#FF9800' : '#4CAF50' },
+                    ]}>
+                      <Text style={styles.eventBadgeText}>
+                        {daysUntil === 0 ? 'TODAY' : daysUntil === 1 ? 'TOMORROW' : `${daysUntil}D`}
+                      </Text>
+                    </View>
 
                     <View style={styles.eventInfo}>
-                      <Text style={styles.eventTitle} numberOfLines={2}>
-                        {event.title}
-                      </Text>
-                      
+                      <Text style={styles.eventTitle} numberOfLines={2}>{event.title}</Text>
                       <View style={styles.eventMeta}>
                         <View style={styles.eventMetaRow}>
                           <MaterialCommunityIcons name="map-marker" size={14} color="#666" />
-                          <Text style={styles.eventMetaText} numberOfLines={1}>
-                            {event.city}
-                          </Text>
+                          <Text style={styles.eventMetaText} numberOfLines={1}>{event.city}</Text>
                         </View>
-                        
                         <View style={styles.eventMetaRow}>
                           <MaterialCommunityIcons name="clock-outline" size={14} color="#666" />
-                          <Text style={styles.eventMetaText}>
-                            {event.start_time}
-                          </Text>
+                          <Text style={styles.eventMetaText}>{event.start_time}</Text>
                         </View>
                       </View>
-
                       {event.max_participants && (
                         <View style={styles.eventParticipants}>
                           <MaterialCommunityIcons name="account-group" size={14} color="#8B0000" />
@@ -429,15 +376,11 @@ const HomeScreen = ({ navigation }) => {
           )}
         </View>
 
-        {/* Recent Activity */}
+        {/* ── Recent Activity ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Activity</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
           </View>
-
           {recentActivities.map(activity => (
             <View key={activity.id} style={styles.activityItem}>
               <View style={styles.activityDot} />
@@ -450,44 +393,29 @@ const HomeScreen = ({ navigation }) => {
           ))}
         </View>
 
-        {/* Safety Tips */}
+        {/* ── Safety Tips ── */}
         <View style={[styles.section, { marginBottom: 100 }]}>
           <Text style={styles.sectionTitle}>💡 Safety Tips</Text>
           <View style={styles.tipsCard}>
-            <Text style={styles.tipText}>
-              • Always verify donor credentials before accepting blood
-            </Text>
-            <Text style={styles.tipText}>
-              • Report any suspicious activity to admins
-            </Text>
-            <Text style={styles.tipText}>
-              • Keep your medical history updated
-            </Text>
+            <Text style={styles.tipText}>• Always verify donor credentials before accepting blood</Text>
+            <Text style={styles.tipText}>• Report any suspicious activity to admins</Text>
+            <Text style={styles.tipText}>• Keep your medical history updated</Text>
           </View>
         </View>
       </ScrollView>
 
-      {/* Bottom Navigation Bar */}
+      {/* ── Bottom Navigation Bar ── */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem}>
           <MaterialCommunityIcons name="home-outline" size={20} color="#8A8A8A" />
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Donation')}
-        >
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Donation')}>
           <MaterialCommunityIcons name="hand-coin" size={20} color="#8A8A8A" />
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Community')}
-        >
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Community')}>
           <MaterialCommunityIcons name="account-group-outline" size={20} color="#8A8A8A" />
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={handleProfilePress}
-        >
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
           <MaterialCommunityIcons name="account-outline" size={20} color="#8A8A8A" />
         </TouchableOpacity>
       </View>
@@ -496,13 +424,11 @@ const HomeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5'
-  },
-  scrollView: {
-    flex: 1
-  },
+  container:   { flex: 1, backgroundColor: '#F5F5F5' },
+  scrollView:  { flex: 1 },
+  centered:    { justifyContent: 'center', alignItems: 'center' },
+
+  // Header
   header: {
     backgroundColor: '#8B0000',
     flexDirection: 'row',
@@ -512,403 +438,163 @@ const styles = StyleSheet.create({
     paddingVertical: 30,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-    marginBottom: 20
+    marginBottom: 20,
   },
-  headerTop: {
-    flex: 1
+  headerTop:    { flex: 1 },
+  headerActions:{ flexDirection: 'row', alignItems: 'center', gap: 10 },
+  greeting:     { fontSize: 16, color: '#fff', opacity: 0.8 },
+  userName:     { fontSize: 28, fontWeight: 'bold', color: '#fff', marginTop: 5 },
+
+  // Icon buttons in header
+  iconButton: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)',
+    position: 'relative',
   },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  adminIconButton: {
+    borderColor: 'rgba(255,215,0,0.5)',
+    backgroundColor: 'rgba(255,215,0,0.15)',
   },
-  myOffersButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+
+  // Notification badge
+  badge: {
+    position: 'absolute', top: -4, right: -4,
+    backgroundColor: '#ff3b30',
+    minWidth: 18, height: 18, borderRadius: 9,
+    justifyContent: 'center', alignItems: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5, borderColor: '#8B0000',
   },
-  greeting: {
-    fontSize: 16,
-    color: '#fff',
-    opacity: 0.8
-  },
-  userName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 5
-  },
-  profileButton: {
-    // Removed marginLeft since it's now in headerActions with gap
-  },
+  badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+
+  // Profile button
+  profileButton: {},
   avatarSmall: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#8B0000'
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: '#8B0000',
   },
-  avatarTextSmall: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#8B0000'
-  },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 25
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333'
-  },
-  seeAll: {
-    fontSize: 14,
-    color: '#8B0000',
-    fontWeight: '500'
-  },
-  // NEW COMPACT EMERGENCY CARD STYLES
+  avatarTextSmall: { fontSize: 18, fontWeight: 'bold', color: '#8B0000' },
+
+  // Emergency card
   emergencyCard: {
     backgroundColor: '#8B0000',
-    marginHorizontal: 20,
-    marginVertical: 15,
-    padding: 18,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 6
+    marginHorizontal: 20, marginVertical: 15,
+    padding: 18, borderRadius: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25, shadowRadius: 4, elevation: 6,
   },
   emergencyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 14,
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'flex-start', marginBottom: 14,
   },
-  emergencyTitle: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#fff',
-    letterSpacing: 0.3,
-  },
-  emergencyCount: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.75)',
-    marginTop: 3,
-    fontWeight: '500',
-  },
+  emergencyTitle: { fontSize: 15, fontWeight: 'bold', color: '#fff', letterSpacing: 0.3 },
+  emergencyCount: { fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 3, fontWeight: '500' },
   viewAllButtonCompact: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    gap: 2,
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, gap: 2,
   },
-  viewAllText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  requestDetails: {
-    marginBottom: 14,
-  },
-  compactRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
-  compactLeft: {
-    flex: 1,
-    marginRight: 12,
-  },
-  patientNameLarge: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 5,
-  },
-  compactInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-    gap: 5,
-  },
-  compactText: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '400',
-  },
+  viewAllText: { fontSize: 12, color: '#fff', fontWeight: '600' },
+  requestDetails: { marginBottom: 14 },
+  compactRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+  compactLeft: { flex: 1, marginRight: 12 },
+  patientNameLarge: { fontSize: 18, fontWeight: 'bold', color: '#fff', marginBottom: 5 },
+  compactInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 5 },
+  compactText: { fontSize: 13, color: 'rgba(255,255,255,0.9)' },
   bloodBadgeCompact: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    minWidth: 60,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12,
+    paddingVertical: 8, paddingHorizontal: 12, alignItems: 'center',
+    minWidth: 60, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)',
   },
-  bloodBadgeText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
-  unitsBadgeText: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 2,
-    fontWeight: '500',
-  },
+  bloodBadgeText:  { fontSize: 20, fontWeight: 'bold', color: '#fff', letterSpacing: 0.5 },
+  unitsBadgeText:  { fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2, fontWeight: '500' },
   bottomInfo: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.15)',
+    flexDirection: 'row', gap: 12, paddingTop: 8,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)',
   },
   respondButton: {
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
+    backgroundColor: '#fff', paddingVertical: 12, borderRadius: 10,
+    alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8,
   },
-  respondButtonText: {
-    color: '#8B0000',
-    fontSize: 15,
-    fontWeight: 'bold',
-    letterSpacing: 0.3,
-  },
-  noRequestText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  // END COMPACT STYLES
+  respondButtonText: { color: '#8B0000', fontSize: 15, fontWeight: 'bold', letterSpacing: 0.3 },
+  noRequestText: { fontSize: 14, color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: 8 },
+
+  // Action grid
   actionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 20,
-    justifyContent: 'space-between',
-    marginTop: 10,
-    marginBottom: 20
+    flexDirection: 'row', flexWrap: 'wrap',
+    paddingHorizontal: 20, justifyContent: 'space-between',
+    marginTop: 10, marginBottom: 20,
   },
   actionCard: {
-    width: '48%',
-    backgroundColor: '#E8E8E8',
-    padding: 20,
-    borderRadius: 15,
-    alignItems: 'center',
-    marginBottom: 15
+    width: '48%', backgroundColor: '#E8E8E8',
+    padding: 20, borderRadius: 15, alignItems: 'center', marginBottom: 15,
   },
   actionIconContainer: {
-    width: 60,
-    height: 60,
-    backgroundColor: '#D0D0D0',
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12
+    width: 60, height: 60, backgroundColor: '#D0D0D0',
+    borderRadius: 30, justifyContent: 'center', alignItems: 'center', marginBottom: 12,
   },
-  actionLabel: {
-    fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-    textAlign: 'center'
-  },
-  eventsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 25,
-  },
-  loadingEventsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-    gap: 10,
-  },
-  loadingEventsText: {
-    fontSize: 14,
-    color: '#666',
-  },
+  actionLabel: { fontSize: 14, color: '#333', fontWeight: '500', textAlign: 'center' },
+
+  // Section
+  section:       { paddingHorizontal: 20, marginBottom: 25 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  sectionTitle:  { fontSize: 18, fontWeight: '600', color: '#333' },
+  seeAll:        { fontSize: 14, color: '#8B0000', fontWeight: '500' },
+
+  // Events
+  loadingEventsContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 10 },
+  loadingEventsText: { fontSize: 14, color: '#666' },
   eventCard: {
-    width: 260,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginRight: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    width: 260, backgroundColor: '#fff', borderRadius: 12,
+    marginRight: 12, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
   },
-  eventImage: {
-    width: '100%',
-    height: 140,
-    resizeMode: 'cover',
-  },
-  eventImagePlaceholder: {
-    width: '100%',
-    height: 140,
-    backgroundColor: '#F0F0F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  eventBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  eventBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 0.5,
-  },
-  eventInfo: {
-    padding: 12,
-  },
-  eventTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  eventMeta: {
-    marginBottom: 8,
-  },
-  eventMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-    gap: 4,
-  },
-  eventMetaText: {
-    fontSize: 12,
-    color: '#666',
-    flex: 1,
-  },
-  eventParticipants: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  eventParticipantsText: {
-    fontSize: 12,
-    color: '#8B0000',
-    fontWeight: '500',
-  },
-  noEventsContainer: {
-    alignItems: 'center',
-    paddingVertical: 30,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-  },
-  noEventsText: {
-    fontSize: 16,
-    color: '#999',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  browseEventsText: {
-    fontSize: 14,
-    color: '#8B0000',
-    fontWeight: '600',
-  },
+  eventImage:            { width: '100%', height: 140, resizeMode: 'cover' },
+  eventImagePlaceholder: { width: '100%', height: 140, backgroundColor: '#F0F0F0', justifyContent: 'center', alignItems: 'center' },
+  eventBadge: { position: 'absolute', top: 10, right: 10, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  eventBadgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold', letterSpacing: 0.5 },
+  eventInfo:      { padding: 12 },
+  eventTitle:     { fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 8, lineHeight: 20 },
+  eventMeta:      { marginBottom: 8 },
+  eventMetaRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 4 },
+  eventMetaText:  { fontSize: 12, color: '#666', flex: 1 },
+  eventParticipants:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  eventParticipantsText: { fontSize: 12, color: '#8B0000', fontWeight: '500' },
+  noEventsContainer: { alignItems: 'center', paddingVertical: 30, backgroundColor: '#fff', borderRadius: 12 },
+  noEventsText:      { fontSize: 16, color: '#999', marginTop: 12, marginBottom: 8 },
+  browseEventsText:  { fontSize: 14, color: '#8B0000', fontWeight: '600' },
+
+  // Activity
   activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    marginBottom: 8
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff', paddingVertical: 12,
+    paddingHorizontal: 15, borderRadius: 8, marginBottom: 8,
   },
-  activityDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#8B0000',
-    marginRight: 12
-  },
-  activityContent: {
-    flex: 1
-  },
-  activityTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 3
-  },
-  activityTime: {
-    fontSize: 12,
-    color: '#999'
-  },
-  activityArrow: {
-    fontSize: 18,
-    color: '#8B0000',
-    marginLeft: 10
-  },
-  tipsCard: {
-    backgroundColor: '#FFF9E5',
-    borderRadius: 10,
-    padding: 15,
-    borderLeftWidth: 4,
-    borderLeftColor: '#8B0000'
-  },
-  tipText: {
-    fontSize: 13,
-    color: '#333',
-    marginBottom: 8,
-    lineHeight: 20
-  },
+  activityDot:    { width: 10, height: 10, borderRadius: 5, backgroundColor: '#8B0000', marginRight: 12 },
+  activityContent:{ flex: 1 },
+  activityTitle:  { fontSize: 14, fontWeight: '500', color: '#333', marginBottom: 3 },
+  activityTime:   { fontSize: 12, color: '#999' },
+  activityArrow:  { fontSize: 18, color: '#8B0000', marginLeft: 10 },
+
+  // Tips
+  tipsCard: { backgroundColor: '#FFF9E5', borderRadius: 10, padding: 15, borderLeftWidth: 4, borderLeftColor: '#8B0000' },
+  tipText:  { fontSize: 13, color: '#333', marginBottom: 8, lineHeight: 20 },
+
+  // Bottom nav
   bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: '#F2F2F2',
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
+    flexDirection: 'row', backgroundColor: '#F2F2F2',
+    paddingVertical: 8, paddingHorizontal: 20,
+    justifyContent: 'space-around', borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 4
+    shadowColor: '#000', shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.04, shadowRadius: 2, elevation: 4,
   },
-  navItem: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    flex: 1
-  },
+  navItem: { alignItems: 'center', paddingVertical: 10, flex: 1 },
 });
 
 export default HomeScreen;

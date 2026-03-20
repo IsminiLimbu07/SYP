@@ -101,7 +101,6 @@ export default function CommunityChatroomScreen({ navigation, route }) {
       console.log('[Chat] send response:', data.success, data.message);
 
       if (data.success) {
-        // Replace only this specific temp message with the real one from server
         setMessages((prev) =>
           prev.map((msg) =>
             msg.message_id === tempId ? { ...data.data, is_temp: false } : msg
@@ -150,17 +149,27 @@ export default function CommunityChatroomScreen({ navigation, route }) {
     ]);
   };
 
+  const NPT = 'Asia/Kathmandu';
+
   const formatTime = (ts) =>
-    new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    new Date(ts).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: NPT,
+    });
 
   const formatDate = (ts) => {
-    const date      = new Date(ts);
-    const today     = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (date.toDateString() === today.toDateString())     return 'Today';
-    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const toNPTDateString = (d) =>
+      d.toLocaleDateString('en-US', { timeZone: NPT, year: 'numeric', month: '2-digit', day: '2-digit' });
+
+    const msgDate = toNPTDateString(new Date(ts));
+    const today   = toNPTDateString(new Date());
+    const yest    = toNPTDateString(new Date(Date.now() - 86400000));
+
+    if (msgDate === today) return 'Today';
+    if (msgDate === yest)  return 'Yesterday';
+    return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: NPT });
   };
 
   const groupByDate = () => {
@@ -186,7 +195,12 @@ export default function CommunityChatroomScreen({ navigation, route }) {
   const uniqueSenders = new Set(messages.map((m) => m.sender_id)).size;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
+    <SafeAreaView style={styles.safeArea}>
 
       {/* ── Header ── */}
       <View style={styles.header}>
@@ -212,11 +226,7 @@ export default function CommunityChatroomScreen({ navigation, route }) {
         </Text>
       </View>
 
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
+      <View style={styles.keyboardView}>
         {/* ── Messages ── */}
         <ScrollView
           ref={scrollViewRef}
@@ -318,6 +328,9 @@ export default function CommunityChatroomScreen({ navigation, route }) {
             onChangeText={setMessageText}
             multiline
             maxLength={500}
+            onFocus={() =>
+              setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 300)
+            }
           />
           <TouchableOpacity
             style={[
@@ -334,13 +347,15 @@ export default function CommunityChatroomScreen({ navigation, route }) {
             )}
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container:        { flex: 1, backgroundColor: '#F0F0F0' },
+  safeArea:         { flex: 1, backgroundColor: '#F0F0F0' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F0F0' },
   loadingText:      { marginTop: 10, fontSize: 16, color: '#666' },
   header: {
