@@ -1,31 +1,31 @@
-// frontend/src/navigation/AppNavigator.jsx
+// Mobile/AshaSetu/navigation/AppNavigator.jsx
 import React, { useContext } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
-import VerifyEmailScreen from '../screens/VerifyEmailScreen';
 
-// ── Auth Screens ──
-import LoginScreen from '../screens/LoginScreen';
+// ── Auth Screens ──────────────────────────────────────────────────────────────
+import LoginScreen    from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgetPasswordScreen';
 import VerifyOTPScreen from '../screens/VerifyOTPScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 
-// ── Main Screens ──
-import HomeScreen from '../screens/HomeScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import EditProfileScreen from '../screens/EditProfileScreen';
-import ChangePasswordScreen from '../screens/ChangePasswordScreen';
-import FindDonorsScreen from '../screens/FindDonorScreen';
-import BloodRequestScreen from '../screens/BloodRequestScreen';
-import BloodRequestsFeedScreen from '../screens/BloodRequestsFeedScreen';
-import AmbulanceScreen from '../screens/AmbulanceScreen';
-import FirstAidScreen from '../screens/FirstAidScreen';
-import DonationScreen from '../screens/DonationScreen';
-import RespondToRequestScreen from '../screens/RespondToRequestScreen';
-import ManageResponseScreen from '../screens/ManageResponseScreen';
+// ── Main Screens ──────────────────────────────────────────────────────────────
+import HomeScreen               from '../screens/HomeScreen';
+import ProfileScreen            from '../screens/ProfileScreen';
+import EditProfileScreen        from '../screens/EditProfileScreen';
+import ChangePasswordScreen     from '../screens/ChangePasswordScreen';
+import FindDonorsScreen         from '../screens/FindDonorScreen';
+import BloodRequestScreen       from '../screens/BloodRequestScreen';
+import BloodRequestsFeedScreen  from '../screens/BloodRequestsFeedScreen';
+import AmbulanceScreen          from '../screens/AmbulanceScreen';
+import FirstAidScreen           from '../screens/FirstAidScreen';
+import DonationScreen           from '../screens/DonationScreen';
+import RespondToRequestScreen   from '../screens/RespondToRequestScreen';
+import ManageResponseScreen     from '../screens/ManageResponseScreen';
 import MyDonationResponseScreen from '../screens/MyDonationResponseScreen';
+import VerifyEmailScreen        from '../screens/VerifyEmailScreen';
 
 // ── Community Screens ──
 import CommunityHomeScreen from '../screens/CommunityHomeScreen';
@@ -38,6 +38,14 @@ import SendNotificationScreen from '../screens/admin/SendNotificationScreen';
 // ── Notification Screens ──
 import NotificationsScreen from '../screens/NotificationScreen';
 
+// ── Notification Screen ───────────────────────────────────────────────────────
+import NotificationsScreen      from '../screens/NotificationsScreen';   // ← NEW
+
+// ── Admin Screens ─────────────────────────────────────────────────────────────
+import AdminDashboard           from '../screens/admin/AdminDashboard';          // ← NEW
+import SendNotificationScreen   from '../screens/admin/SendNotificationScreen';  // ← NEW
+
+// ── Deep-link config ──────────────────────────────────────────────────────────
 export const linking = {
   prefixes: ['ashasetu://'],
   config: {
@@ -50,8 +58,8 @@ export const linking = {
 const Stack = createNativeStackNavigator();
 
 const darkRedHeader = {
-  headerStyle: { backgroundColor: '#8B0000' },
-  headerTintColor: '#fff',
+  headerStyle:      { backgroundColor: '#8B0000' },
+  headerTintColor:  '#fff',
   headerTitleStyle: { fontWeight: 'bold' },
 };
 
@@ -94,7 +102,7 @@ const AppNavigator = () => {
         </>
       ) : (
         <>
-          <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Login"    component={LoginScreen}    options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register', ...darkRedHeader }} />
           {/* ── Forgot Password Flow ── */}
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ headerShown: false }} />

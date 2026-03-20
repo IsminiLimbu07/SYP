@@ -18,8 +18,8 @@ import { Animated } from 'react-native';
 const HomeScreen = ({ navigation }) => {
   const { user, token } = useContext(AuthContext);
   const [bloodRequests, setBloodRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [nearbyEvents, setNearbyEvents] = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [nearbyEvents, setNearbyEvents]   = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
