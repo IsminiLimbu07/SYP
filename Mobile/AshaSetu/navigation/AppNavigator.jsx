@@ -8,6 +8,9 @@ import VerifyEmailScreen from '../screens/VerifyEmailScreen';
 // ── Auth Screens ──
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgetPasswordScreen';
+import VerifyOTPScreen from '../screens/VerifyOTPScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 
 // ── Main Screens ──
 import HomeScreen from '../screens/HomeScreen';
@@ -27,18 +30,16 @@ import MyDonationResponseScreen from '../screens/MyDonationResponseScreen';
 // ── Community Screens ──
 import CommunityHomeScreen from '../screens/CommunityHomeScreen';
 import CommunityChatroomScreen from '../screens/CommunityChatRoomScreen';
-import CreateEventScreen from '../screens/CreateEventScreen';
-import EventDetailsScreen from '../screens/EventDetailsScreen';
 
-// ── Campaign Screens (NEW) ──
-import CreateCampaignScreen from '../screens/CreateCampaignScreen';
-import CampaignDetailsScreen from '../screens/CampaignDetailsScreen';
+// ── Admin Screens ──
+import AdminDashboard from '../screens/admin/AdminDashboard';
+import SendNotificationScreen from '../screens/admin/SendNotificationScreen';
+
+// ── Notification Screens ──
+import NotificationsScreen from '../screens/NotificationScreen';
 
 export const linking = {
-  prefixes: [
-    'ashasetu://',
-    'exp:// http://127.0.0.1:4040/--/',
-  ],
+  prefixes: ['ashasetu://'],
   config: {
     screens: {
       VerifyEmail: 'verify-email',
@@ -55,7 +56,7 @@ const darkRedHeader = {
 };
 
 const AppNavigator = () => {
-  const { user, loading } = useContext(AuthContext);
+  const { user, loading, isAdmin } = useContext(AuthContext);
 
   if (loading) {
     return (
@@ -66,42 +67,39 @@ const AppNavigator = () => {
   }
 
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      initialRouteName={user ? (isAdmin ? 'AdminDashboard' : 'Home') : 'Login'}
+    >
       {user ? (
         <>
           <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-
+          <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ headerShown: false }} />
+          <Stack.Screen name="SendNotification" component={SendNotificationScreen} options={{ title: 'Send Notification', ...darkRedHeader }} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications', ...darkRedHeader }} />
           <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile', ...darkRedHeader }} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile', ...darkRedHeader }} />
           <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Change Password', ...darkRedHeader }} />
-
           <Stack.Screen name="FindDonor" component={FindDonorsScreen} options={{ title: 'Find Donors', ...darkRedHeader }} />
           <Stack.Screen name="BloodRequest" component={BloodRequestScreen} options={{ title: 'Blood Request', ...darkRedHeader }} />
           <Stack.Screen name="BloodRequestsFeed" component={BloodRequestsFeedScreen} options={{ title: 'Blood Requests', ...darkRedHeader }} />
           <Stack.Screen name="RespondToRequest" component={RespondToRequestScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ManageResponses" component={ManageResponseScreen} options={{ headerShown: false }} />
           <Stack.Screen name="MyDonationResponses" component={MyDonationResponseScreen} options={{ headerShown: false }} />
-
           <Stack.Screen name="Ambulance" component={AmbulanceScreen} options={{ title: 'Ambulance Services', ...darkRedHeader }} />
           <Stack.Screen name="FirstAid" component={FirstAidScreen} options={{ title: 'First Aid', ...darkRedHeader }} />
-
-          {/* Donation / Campaigns */}
-          <Stack.Screen name="Donation" component={DonationScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="CreateCampaign" component={CreateCampaignScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="CampaignDetails" component={CampaignDetailsScreen} options={{ headerShown: false }} />
-
-          {/* Community */}
+          <Stack.Screen name="Donation" component={DonationScreen} options={{ title: 'Medical Fundraising', ...darkRedHeader }} />
           <Stack.Screen name="Community" component={CommunityHomeScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="EventDetails" component={EventDetailsScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CommunityChatroom" component={CommunityChatroomScreen} options={{ headerShown: false }} />
-
           <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ title: 'Verify Email', ...darkRedHeader }} />
         </>
       ) : (
         <>
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register', ...darkRedHeader }} />
+          {/* ── Forgot Password Flow ── */}
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="VerifyOTP" component={VerifyOTPScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ headerShown: false }} />
         </>
       )}
     </Stack.Navigator>
