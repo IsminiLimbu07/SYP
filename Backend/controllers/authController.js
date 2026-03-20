@@ -1,12 +1,13 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import { sql } from '../config/db.js';
 
-// ─── Helper: build a fresh JWT from the DB row ────────────────────────────────
-const signToken = (user) =>
-  jwt.sign(
+const signToken = (user) => {
+  return jwt.sign(
     {
       user_id: user.user_id,
       email: user.email,
@@ -15,8 +16,9 @@ const signToken = (user) =>
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );
+};
 
-// ─── Register ─────────────────────────────────────────────────────────────────
+// Register new user
 export const register = async (req, res) => {
   try {
     const { full_name, email, phone_number, password } = req.body;
@@ -55,8 +57,9 @@ export const register = async (req, res) => {
       });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(password, salt);
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const password_hash = await bcrypt.hash(password, salt);
 
     const newUser = await sql`
       INSERT INTO users (full_name, email, phone_number, password_hash)
@@ -91,10 +94,17 @@ export const login = async (req, res) => {
       });
     }
 
-    const users = await sql`SELECT * FROM users WHERE email = ${email}`;
-    if (users.length === 0) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
-    }
+        // Find user by email
+        const users = await sql`
+            SELECT * FROM users WHERE email = ${email}
+        `;
+
+        if (users.length === 0) {
+            return res.status(401).json({ 
+                success: false,
+                message: "Invalid email or password" 
+            });
+        }
 
     const user = users[0];
 
@@ -102,13 +112,23 @@ export const login = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Your account has been deactivated' });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    if (!isPasswordValid) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
-    }
+        // Verify password
+        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
-    const token = signToken(user);
-    const profile = await sql`SELECT * FROM user_profiles WHERE user_id = ${user.user_id}`;
+        if (!isPasswordValid) {
+            return res.status(401).json({ 
+                success: false,
+                message: "Invalid email or password" 
+            });
+        }
+
+        // Generate JWT token
+        const token = signToken(user);
+
+        // Get user profile
+        const profile = await sql`
+            SELECT * FROM user_profiles WHERE user_id = ${user.user_id}
+        `;
 
     delete user.password_hash;
 
@@ -142,47 +162,21 @@ export const getProfile = async (req, res) => {
       SELECT * FROM user_profiles WHERE user_id = ${req.user.user_id}
     `;
 
-    res.status(200).json({
-      success: true,
-      data: { ...users[0], profile: profile[0] || null },
-    });
-  } catch (error) {
-    console.error('Error getting profile:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-};
+        res.status(200).json({
+            success: true,
+            data: {
+                ...users[0],
+                profile: profile[0] || null
+            }
+        });
 
-// ─── Refresh token endpoint ──────────────────────────────────────────────
-export const refreshToken = async (req, res) => {
-  try {
-    const users = await sql`
-      SELECT user_id, full_name, email, phone_number, is_admin,
-             is_verified, is_active, created_at
-      FROM users WHERE user_id = ${req.user.user_id}
-    `;
-
-    if (users.length === 0) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+    } catch (error) {
+        console.error("Error getting profile:", error);
+        res.status(500).json({ 
+            success: false,
+            message: "Internal server error" 
+        });
     }
-
-    const user = users[0];
-    const token = signToken(user);
-    const profile = await sql`
-      SELECT * FROM user_profiles WHERE user_id = ${user.user_id}
-    `;
-
-    res.status(200).json({
-      success: true,
-      message: 'Token refreshed successfully',
-      data: {
-        user: { ...user, profile: profile[0] || null },
-        token,
-      },
-    });
-  } catch (error) {
-    console.error('Error refreshing token:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
 };
 
 // ─── Update profile ───────────────────────────────────────────────────────────
@@ -196,46 +190,52 @@ export const updateProfile = async (req, res) => {
       medical_conditions, allergies, location_lat, location_lng,
     } = req.body;
 
-    if (full_name || phone_number) {
-      await sql`
-        UPDATE users
-        SET full_name = COALESCE(${full_name}, full_name),
-            phone_number = COALESCE(${phone_number}, phone_number),
-            updated_at = NOW()
-        WHERE user_id = ${req.user.user_id}
-      `;
-    }
+        // Update basic user info if provided
+        if (full_name || phone_number) {
+            await sql`
+                UPDATE users 
+                SET 
+                    full_name = COALESCE(${full_name}, full_name),
+                    phone_number = COALESCE(${phone_number}, phone_number),
+                    updated_at = NOW()
+                WHERE user_id = ${req.user.user_id}
+            `;
+        }
 
-    await sql`
-      UPDATE user_profiles SET
-        date_of_birth = COALESCE(${date_of_birth}, date_of_birth),
-        gender = COALESCE(${gender}, gender),
-        address = COALESCE(${address}, address),
-        city = COALESCE(${city}, city),
-        blood_group = COALESCE(${blood_group}, blood_group),
-        willing_to_donate_blood = COALESCE(${willing_to_donate_blood}, willing_to_donate_blood),
-        last_donation_date = COALESCE(${last_donation_date}, last_donation_date),
-        available_to_donate = COALESCE(${available_to_donate}, available_to_donate),
-        willing_to_volunteer = COALESCE(${willing_to_volunteer}, willing_to_volunteer),
-        volunteer_skills = COALESCE(${volunteer_skills}, volunteer_skills),
-        volunteer_availability = COALESCE(${volunteer_availability}, volunteer_availability),
-        emergency_contact_name = COALESCE(${emergency_contact_name}, emergency_contact_name),
-        emergency_contact_phone = COALESCE(${emergency_contact_phone}, emergency_contact_phone),
-        medical_conditions = COALESCE(${medical_conditions}, medical_conditions),
-        allergies = COALESCE(${allergies}, allergies),
-        location_lat = COALESCE(${location_lat}, location_lat),
-        location_lng = COALESCE(${location_lng}, location_lng),
-        updated_at = NOW()
-      WHERE user_id = ${req.user.user_id}
-    `;
+        // Update user profile
+        await sql`
+            UPDATE user_profiles
+            SET 
+                date_of_birth = COALESCE(${date_of_birth}, date_of_birth),
+                gender = COALESCE(${gender}, gender),
+                address = COALESCE(${address}, address),
+                city = COALESCE(${city}, city),
+                blood_group = COALESCE(${blood_group}, blood_group),
+                willing_to_donate_blood = COALESCE(${willing_to_donate_blood}, willing_to_donate_blood),
+                last_donation_date = COALESCE(${last_donation_date}, last_donation_date),
+                available_to_donate = COALESCE(${available_to_donate}, available_to_donate),
+                willing_to_volunteer = COALESCE(${willing_to_volunteer}, willing_to_volunteer),
+                volunteer_skills = COALESCE(${volunteer_skills}, volunteer_skills),
+                volunteer_availability = COALESCE(${volunteer_availability}, volunteer_availability),
+                emergency_contact_name = COALESCE(${emergency_contact_name}, emergency_contact_name),
+                emergency_contact_phone = COALESCE(${emergency_contact_phone}, emergency_contact_phone),
+                medical_conditions = COALESCE(${medical_conditions}, medical_conditions),
+                allergies = COALESCE(${allergies}, allergies),
+                location_lat = COALESCE(${location_lat}, location_lat),
+                location_lng = COALESCE(${location_lng}, location_lng),
+                updated_at = NOW()
+            WHERE user_id = ${req.user.user_id}
+        `;
 
-    const updatedUser = await sql`
-      SELECT user_id, full_name, email, phone_number, is_admin, created_at
-      FROM users WHERE user_id = ${req.user.user_id}
-    `;
-    const updatedProfile = await sql`
-      SELECT * FROM user_profiles WHERE user_id = ${req.user.user_id}
-    `;
+        // Get updated profile
+        const updatedUser = await sql`
+            SELECT user_id, full_name, email, phone_number, is_admin, created_at
+            FROM users WHERE user_id = ${req.user.user_id}
+        `;
+
+        const updatedProfile = await sql`
+            SELECT * FROM user_profiles WHERE user_id = ${req.user.user_id}
+        `;
 
     res.status(200).json({
       success: true,
@@ -248,51 +248,63 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-// ─── Change password ──────────────────────────────────────────────────────────
-// ─── Change password ──────────────────────────────────────────────────────────
+// Change password
 export const changePassword = async (req, res) => {
-  try {
-    // ✅ Guard FIRST before destructuring
-    if (!req.body) {
-      return res.status(400).json({ success: false, message: 'Request body is missing' });
+    try {
+        const { current_password, new_password } = req.body;
+
+        if (!current_password || !new_password) {
+            return res.status(400).json({ 
+                success: false,
+                message: "Current password and new password are required" 
+            });
+        }
+
+        if (new_password.length < 6) {
+            return res.status(400).json({ 
+                success: false,
+                message: "New password must be at least 6 characters" 
+            });
+        }
+
+        // Get user
+        const users = await sql`
+            SELECT * FROM users WHERE user_id = ${req.user.user_id}
+        `;
+
+        // Verify current password
+        const isPasswordValid = await bcrypt.compare(current_password, users[0].password_hash);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ 
+                success: false,
+                message: "Current password is incorrect" 
+            });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const new_password_hash = await bcrypt.hash(new_password, salt);
+
+        // Update password
+        await sql`
+            UPDATE users 
+            SET password_hash = ${new_password_hash}, updated_at = NOW()
+            WHERE user_id = ${req.user.user_id}
+        `;
+
+        res.status(200).json({
+            success: true,
+            message: "Password changed successfully"
+        });
+
+    } catch (error) {
+        console.error("Error changing password:", error);
+        res.status(500).json({ 
+            success: false,
+            message: "Internal server error" 
+        });
     }
-
-    const { current_password, new_password } = req.body;
-
-    if (!current_password || !new_password) {
-      return res.status(400).json({ success: false, message: 'Current and new password are required' });
-    }
-    if (new_password.length < 6) {
-      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
-    }
-    if (current_password === new_password) {
-      return res.status(400).json({ success: false, message: 'New password must differ from current' });
-    }
-
-    const users = await sql`SELECT * FROM users WHERE user_id = ${req.user.user_id} AND is_active = true`;
-    if (users.length === 0) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    const user = users[0];
-
-    if (!user.password_hash) {
-      return res.status(500).json({ success: false, message: 'Account error: no password set' });
-    }
-
-    const isPasswordValid = await bcrypt.compare(current_password, user.password_hash);
-    if (!isPasswordValid) {
-      return res.status(401).json({ success: false, message: 'Current password is incorrect' });
-    }
-
-    const new_password_hash = await bcrypt.hash(new_password, 10);
-    await sql`UPDATE users SET password_hash = ${new_password_hash}, updated_at = NOW() WHERE user_id = ${req.user.user_id}`;
-
-    res.status(200).json({ success: true, message: 'Password changed successfully' });
-  } catch (error) {
-    console.error('❌ changePassword error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
 };
 // ─── Send verification email ──────────────────────────────────────────────────
 export const sendVerificationEmail = async (req, res) => {
@@ -312,52 +324,65 @@ export const sendVerificationEmail = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email is already verified' });
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        // Generate a secure token + 24h expiry
+        const token = crypto.randomBytes(32).toString('hex');
+        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    await sql`
-      UPDATE users
-      SET verification_token = ${token},
-          verification_token_expires = ${expires}
-      WHERE user_id = ${user.user_id}
-    `;
+        // Save token to DB
+        await sql`
+            UPDATE users
+            SET verification_token = ${token},
+                verification_token_expires = ${expires}
+            WHERE user_id = ${user.user_id}
+        `;
 
-    const NGROK_URL = process.env.NGROK_URL || 'https://malachi-inconvertible-lita.ngrok-free.dev';
-    const verificationUrl = `${NGROK_URL}/api/auth/verify-email?token=${token}&userId=${user.user_id}`;
+        // Use ngrok URL for verification link (commented local IP for now)
+        const NGROK_URL = process.env.NGROK_URL || 'https://malachi-inconvertible-lita.ngrok-free.dev';
+        // const BASE_URL = process.env.BASE_URL || 'http://192.168.1.4:9000';
+        const verificationUrl = `${NGROK_URL}/api/auth/verify-email?token=${token}&userId=${user.user_id}`;
+        
+        console.log('✅ Verification URL being sent:', verificationUrl);
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-    });
+        // Send email via nodemailer
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
 
-    await transporter.sendMail({
-      from: `"AshaSetu" <${process.env.EMAIL_USER}>`,
-      to: user.email,
-      subject: 'Verify your email — AshaSetu',
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
-          <div style="background:#8B0000;padding:28px;text-align:center">
-            <h1 style="color:#fff;margin:0;font-size:22px">Verify Your Email</h1>
-          </div>
-          <div style="padding:32px">
-            <p style="color:#333;font-size:15px">Hi <strong>${user.full_name}</strong>,</p>
-            <p style="color:#555;font-size:14px;line-height:1.6">
-              Click the button below to verify your email address. This link expires in <strong>24 hours</strong>.
-            </p>
-            <div style="text-align:center;margin:28px 0">
-              <a href="${verificationUrl}"
-                 style="background:#8B0000;color:#fff;text-decoration:none;padding:13px 32px;border-radius:8px;font-size:15px;font-weight:bold;display:inline-block">
-                Verify Email
-              </a>
-            </div>
-            <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
-              Or copy this link:<br>
-              <span style="color:#0066cc;word-break:break-all">${verificationUrl}</span>
-            </p>
-          </div>
-        </div>
-      `,
-    });
+        await transporter.sendMail({
+            from: `"AshaSetu" <${process.env.EMAIL_USER}>`,
+            to: user.email,
+            subject: 'Verify your email — AshaSetu',
+            html: `
+                <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+                    <div style="background:#8B0000;padding:28px;text-align:center">
+                        <h1 style="color:#fff;margin:0;font-size:22px">Verify Your Email</h1>
+                    </div>
+                    <div style="padding:32px">
+                        <p style="color:#333;font-size:15px">Hi <strong>${user.full_name}</strong>,</p>
+                        <p style="color:#555;font-size:14px;line-height:1.6">
+                            Click the button below to verify your email address. This link expires in <strong>24 hours</strong>.
+                        </p>
+                        <div style="text-align:center;margin:28px 0">
+                            <a href="${verificationUrl}"
+                               style="background:#8B0000;color:#fff;text-decoration:none;padding:13px 32px;border-radius:8px;font-size:15px;font-weight:bold;display:inline-block">
+                                Verify Email
+                            </a>
+                        </div>
+                        <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
+                            Or copy this link:<br>
+                            <span style="color:#0066cc;word-break:break-all">${verificationUrl}</span>
+                        </p>
+                        <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
+                            If you didn't request this, you can safely ignore this email.
+                        </p>
+                    </div>
+                </div>
+            `,
+        });
 
     res.status(200).json({ success: true, message: 'Verification email sent successfully' });
   } catch (error) {
@@ -392,13 +417,13 @@ export const verifyEmail = async (req, res) => {
       return res.send(verifyPage(true, 'Your email is already verified!'));
     }
 
-    await sql`
-      UPDATE users
-      SET is_verified = true,
-          verification_token = NULL,
-          verification_token_expires = NULL
-      WHERE user_id = ${userId}
-    `;
+        await sql`
+            UPDATE users
+            SET is_verified = true,
+                verification_token = NULL,
+                verification_token_expires = NULL
+            WHERE user_id = ${userId}
+        `;
 
     res.send(verifyPage(true, 'Your email has been verified! You can now return to the app.'));
   } catch (error) {
@@ -430,6 +455,35 @@ const verifyPage = (success, message) => `
     </body>
   </html>
 `;
+
+export const refreshToken = async (req, res) => {
+  try {
+    const userId = req.user?.user_id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const users = await sql`
+      SELECT user_id, full_name, email, phone_number, is_admin, is_active
+      FROM users WHERE user_id = ${userId}
+    `;
+
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (!users[0].is_active) {
+      return res.status(403).json({ success: false, message: 'User account is inactive' });
+    }
+
+    const token = signToken(users[0]);
+
+    res.status(200).json({ success: true, message: 'Token refreshed successfully', token });
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
 
 // ─── Forgot Password — generate & email OTP ───────────────────────────────────
 export const forgotPassword = async (req, res) => {

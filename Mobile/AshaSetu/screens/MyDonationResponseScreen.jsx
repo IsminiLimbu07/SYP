@@ -9,8 +9,8 @@ import {
   Alert,
   Linking,
   ActivityIndicator,
+  SafeAreaView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { apiConfig } from '../config/api';
@@ -398,8 +398,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 30,
   },
+  headerTop: { flex: 1 },
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',

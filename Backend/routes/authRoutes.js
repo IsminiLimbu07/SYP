@@ -31,7 +31,6 @@ router.post('/reset-password',   resetPassword);
 router.get('/profile',         authenticateToken, getProfile);
 router.put('/profile',         authenticateToken, updateProfile);
 router.put('/change-password', authenticateToken, changePassword);
-
 router.post('/send-verification-email', authenticateToken, sendVerificationEmail);
 router.post('/refresh-token',           authenticateToken, refreshToken);
 

@@ -50,7 +50,9 @@ export default function RespondToRequestScreen({ route, navigation }) {
             {
               text: 'OK',
               onPress: () => {
-                navigation.goBack();
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                }
                 // Optionally navigate to "My Responses" screen
                 // navigation.navigate('MyDonationResponses');
               },
@@ -85,11 +87,11 @@ export default function RespondToRequestScreen({ route, navigation }) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => { if (navigation.canGoBack()) navigation.goBack(); }}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Respond to Request</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ width: 40  }} />
       </View>
 
       <ScrollView

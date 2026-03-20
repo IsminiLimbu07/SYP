@@ -119,10 +119,12 @@ export const makeRequest = async (url, options = {}) => {
     console.error('🚨 Request failed:', errorMsg);
 
     if (errorMsg.includes('Network request failed') || errorMsg.includes('aborted')) {
-      throw new Error('Cannot reach server. Make sure:
-1. Backend is running (node server.js)
-2. Ngrok is running and the URL in config/api.js is current
-3. Your device and PC are on the same network or ngrok tunnel is active');
+      throw new Error(
+        'Cannot reach server. Make sure:\n' +
+        '1. Backend is running (node server.js)\n' +
+        '2. Ngrok is running and the URL in config/api.js is current\n' +
+        '3. Your device and PC are on the same network or ngrok tunnel is active'
+      );
     }
 
     throw new Error(errorMsg);

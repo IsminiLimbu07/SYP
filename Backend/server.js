@@ -4,8 +4,9 @@
 
 import express from 'express';
 import cors from 'cors';
-//import dotenv from 'dotenv';
-//dotenv.config();
+import dotenv from 'dotenv';
+
+dotenv.config();
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -21,6 +22,7 @@ import donorRoutes     from './routes/donorRoutes.js';
 import uploadRoutes    from './routes/uploadRoutes.js';
 import campaignRoutes  from './routes/campaignRoutes.js';
 
+dotenv.config();
 
 const app  = express();
 const PORT = process.env.PORT || 9000;

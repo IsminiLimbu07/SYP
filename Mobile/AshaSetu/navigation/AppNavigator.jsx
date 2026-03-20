@@ -27,27 +27,26 @@ import ManageResponseScreen     from '../screens/ManageResponseScreen';
 import MyDonationResponseScreen from '../screens/MyDonationResponseScreen';
 import VerifyEmailScreen        from '../screens/VerifyEmailScreen';
 
-// ── Community Screens ──
-import CommunityHomeScreen from '../screens/CommunityHomeScreen';
-import CommunityChatroomScreen from '../screens/CommunityChatRoomScreen';
+// ── Community Screens ─────────────────────────────────────────────────────────
+import CommunityHomeScreen      from '../screens/CommunityHomeScreen';
+import CommunityChatroomScreen  from '../screens/CommunityChatRoomScreen';
+import CreateEventScreen        from '../screens/CreateEventScreen';
+import EventDetailsScreen       from '../screens/EventDetailsScreen';
 
-// ── Admin Screens ──
-import AdminDashboard from '../screens/admin/AdminDashboard';
-import SendNotificationScreen from '../screens/admin/SendNotificationScreen';
-
-// ── Notification Screens ──
-import NotificationsScreen from '../screens/NotificationScreen';
+// ── Campaign Screens ──────────────────────────────────────────────────────────
+import CreateCampaignScreen     from '../screens/CreateCampaignScreen';
+import CampaignDetailsScreen    from '../screens/CampaignDetailsScreen';
 
 // ── Notification Screen ───────────────────────────────────────────────────────
-import NotificationsScreen      from '../screens/NotificationsScreen';   // ← NEW
+import NotificationsScreen      from '../screens/NotificationScreen';
 
 // ── Admin Screens ─────────────────────────────────────────────────────────────
-import AdminDashboard           from '../screens/admin/AdminDashboard';          // ← NEW
-import SendNotificationScreen   from '../screens/admin/SendNotificationScreen';  // ← NEW
+import AdminDashboard           from '../screens/admin/AdminDashboard';
+import SendNotificationScreen   from '../screens/admin/SendNotificationScreen';
 
 // ── Deep-link config ──────────────────────────────────────────────────────────
 export const linking = {
-  prefixes: ['ashasetu://'],
+  prefixes: ['ashasetu://', 'exp://127.0.0.1:4040/--/'],
   config: {
     screens: {
       VerifyEmail: 'verify-email',
@@ -84,6 +83,10 @@ const AppNavigator = () => {
           <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ headerShown: false }} />
           <Stack.Screen name="SendNotification" component={SendNotificationScreen} options={{ title: 'Send Notification', ...darkRedHeader }} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications', ...darkRedHeader }} />
+          <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ title: 'Create Event', ...darkRedHeader }} />
+          <Stack.Screen name="CreateCampaign" component={CreateCampaignScreen} options={{ title: 'Create Campaign', ...darkRedHeader }} />
+          <Stack.Screen name="EventDetails" component={EventDetailsScreen} options={{ title: 'Event Details', ...darkRedHeader }} />
+          <Stack.Screen name="CampaignDetails" component={CampaignDetailsScreen} options={{ title: 'Campaign Details', ...darkRedHeader }} />
           <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile', ...darkRedHeader }} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile', ...darkRedHeader }} />
           <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Change Password', ...darkRedHeader }} />

@@ -26,7 +26,7 @@ router.get('/messages', authenticateToken, async (req, res) => {
                     cm.message_type,
                     cm.image_url,
                     cm.event_id,
-                    cm.created_at,
+                    to_char(cm.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
                     u.full_name   AS sender_name,
                     u.is_volunteer AS sender_is_volunteer,
                     u.phone_number AS sender_phone
@@ -45,7 +45,7 @@ router.get('/messages', authenticateToken, async (req, res) => {
                     cm.message_type,
                     cm.image_url,
                     cm.event_id,
-                    cm.created_at,
+                    to_char(cm.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
                     u.full_name   AS sender_name,
                     u.is_volunteer AS sender_is_volunteer,
                     u.phone_number AS sender_phone
@@ -102,7 +102,8 @@ router.post('/send', authenticateToken, async (req, res) => {
         const [newMessage] = await sql`
             INSERT INTO chat_messages (sender_id, message_text, message_type, image_url, event_id)
             VALUES (${userId}, ${trimmedText}, ${message_type}, ${image_url}, ${event_id})
-            RETURNING message_id, sender_id, message_text, message_type, image_url, event_id, created_at
+            RETURNING message_id, sender_id, message_text, message_type, image_url, event_id,
+                      to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at
         `;
 
         // ── Fetch sender info ──
@@ -223,7 +224,8 @@ router.post('/share-event/:eventId', authenticateToken, async (req, res) => {
         const [result] = await sql`
             INSERT INTO chat_messages (sender_id, message_text, message_type, event_id)
             VALUES (${userId}, ${messageText}, 'event_share', ${eventId})
-            RETURNING message_id, sender_id, message_text, message_type, event_id, created_at
+            RETURNING message_id, sender_id, message_text, message_type, event_id,
+                      to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at
         `;
 
         return res.status(201).json({

@@ -91,9 +91,8 @@ export default function DonationScreen({ navigation }) {
           onPress={() => navigation.goBack()}
           style={styles.backBtn}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Medical Fundraising</Text>
+        <Text style={styles.headerTitle}>Create Campaign</Text>
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => navigation.navigate('CreateCampaign')}

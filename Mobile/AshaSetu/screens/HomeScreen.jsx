@@ -192,6 +192,7 @@ const HomeScreen = ({ navigation }) => {
     return url.startsWith('/') ? `${base}${url}` : `${base}/${url}`;
   };
 
+
   const fetchNearbyEvents = async () => {
     try {
       setLoadingEvents(true);

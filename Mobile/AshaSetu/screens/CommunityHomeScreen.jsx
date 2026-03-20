@@ -206,9 +206,11 @@ export default function CommunityHomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-
+      
+      
       {/* ── Header ── */}
       <View style={styles.header}>
+        
         <Text style={styles.headerTitle}>Community</Text>
         {isVolunteer && (
           <TouchableOpacity
@@ -414,7 +416,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 30,
+    marginBottom: 20
   },
   headerTitle:    { fontSize: 20, fontWeight: '600', color: '#fff' },
   createEventBtn: {

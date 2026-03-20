@@ -198,13 +198,7 @@ export default function CreateCampaignScreen({ navigation }) {
       <StatusBar barStyle="light-content" backgroundColor="#8B0000" />
 
       {/* ── Header ── */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Campaign</Text>
-        <View style={{ width: 40 }} />
-      </View>
+
 
       <ScrollView
         style={styles.scroll}
