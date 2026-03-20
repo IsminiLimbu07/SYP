@@ -3,14 +3,26 @@ import { apiConfig, makeRequest } from '../config/api';
 
 export const loginUser = async (credentials) => {
   try {
+    console.log('🔍 API: Making login request with:', credentials.email);
+
     const response = await makeRequest(apiConfig.ENDPOINTS.AUTH.LOGIN, {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
+    console.log('🔍 API: Raw response:', JSON.stringify(response, null, 2));
 
     if (!response.success) {
       throw new Error(response.message || 'Login failed');
     }
+
+    const { token, user } = response.data;
+    const processedUser = {
+      ...user,
+      is_admin: user.is_admin === true || user.is_admin === 'true' || user.is_admin === 1,
+    };
+
+    console.log('🔍 API: Processed user:', processedUser);
+    console.log('🔍 API: is_admin after fix:', processedUser.is_admin);
 
     return {
       success: response.success,
@@ -50,7 +62,7 @@ export const getProfile = async (token) => {
     const response = await makeRequest(apiConfig.ENDPOINTS.AUTH.PROFILE, {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${token}`,
+        'Authorization': `Bearer ${token}`,
       },
     });
 
@@ -73,7 +85,8 @@ export const updateProfile = async (token, profileData) => {
     const response = await makeRequest(apiConfig.ENDPOINTS.AUTH.UPDATE_PROFILE, {
       method: 'PUT',
       headers: {
-        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',  // ✅ ADDED
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(profileData),
     });
@@ -97,7 +110,8 @@ export const changePassword = async (token, passwordData) => {
     const response = await makeRequest(apiConfig.ENDPOINTS.AUTH.CHANGE_PASSWORD, {
       method: 'PUT',
       headers: {
-        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',  // ✅ THIS WAS THE BUG
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(passwordData),
     });
@@ -115,13 +129,13 @@ export const changePassword = async (token, passwordData) => {
   }
 };
 
-// ─── NEW: Send verification email ─────────────────────────────────────────────
 export const sendVerificationEmail = async (token) => {
   try {
     const response = await makeRequest(apiConfig.ENDPOINTS.AUTH.SEND_VERIFICATION_EMAIL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',  // ✅ ADDED
+        'Authorization': `Bearer ${token}`,
       },
     });
 

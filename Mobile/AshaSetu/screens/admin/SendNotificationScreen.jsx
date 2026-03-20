@@ -1,0 +1,473 @@
+// Mobile/AshaSetu/screens/admin/SendNotificationScreen.jsx
+// FIXED VERSION — completely standalone screen with its own header
+// Place at: screens/admin/SendNotificationScreen.jsx
+
+import React, { useState, useContext } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  Switch,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { AuthContext } from '../../context/AuthContext';
+import { apiConfig } from '../../config/api';
+
+const SendNotificationScreen = ({ navigation }) => {
+  const { token } = useContext(AuthContext);
+
+  const [loading,          setLoading]          = useState(false);
+  const [notificationType, setNotificationType] = useState('sos');
+  const [title,            setTitle]            = useState('');
+  const [message,          setMessage]          = useState('');
+  const [severity,         setSeverity]         = useState('critical');
+  const [targetAll,        setTargetAll]        = useState(true);
+  const [targetCity,       setTargetCity]       = useState('');
+  const [sendPush,         setSendPush]         = useState(true);
+  const [sendSms,          setSendSms]          = useState(false);
+
+  const handleSend = async () => {
+    if (!title.trim()) {
+      Alert.alert('Missing Field', 'Please enter a notification title.');
+      return;
+    }
+    if (!message.trim()) {
+      Alert.alert('Missing Field', 'Please enter a notification message.');
+      return;
+    }
+    if (!targetAll && !targetCity.trim()) {
+      Alert.alert('Missing Field', 'Please enter a city name for targeted notifications.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${apiConfig.BASE_URL}/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title:       title.trim(),
+          message:     message.trim(),
+          alert_type:  notificationType,
+          severity:    notificationType === 'sos' ? severity : 'info',
+          target_all:  targetAll,
+          target_city: targetAll ? null : targetCity.trim(),
+          send_push:   sendPush,
+          send_sms:    sendSms,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        Alert.alert(
+          '✅ Sent!',
+          `${notificationType === 'sos' ? 'SOS alert' : 'Announcement'} broadcast successfully.`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+      } else {
+        Alert.alert('Failed', data.message || 'Could not send notification.');
+      }
+    } catch (error) {
+      Alert.alert('Network Error', 'Could not reach the server.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const accentColor = notificationType === 'sos' ? '#ff3b30' : '#007AFF';
+
+  return (
+    <>
+      <StatusBar barStyle="light-content" backgroundColor="#8B0000" />
+      <SafeAreaView style={styles.safeTop} />
+      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+
+        {/* ── Header ── */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={styles.backArrow}>{'←'}</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Send Notification</Text>
+          <View style={{ width: 44 }} />
+        </View>
+
+        {/* ── Scrollable Form ── */}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+
+            {/* ── Type Selector ── */}
+            <Text style={styles.label}>NOTIFICATION TYPE</Text>
+            <View style={styles.typeRow}>
+              <TouchableOpacity
+                style={[styles.typeCard, notificationType === 'sos' && styles.typeCardActive]}
+                onPress={() => setNotificationType('sos')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.typeEmoji}>🚨</Text>
+                <Text style={[styles.typeTitle, notificationType === 'sos' && { color: '#8B0000' }]}>
+                  SOS Alert
+                </Text>
+                <Text style={styles.typeSubtitle}>Critical emergency</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.typeCard, notificationType === 'general' && styles.typeCardActive]}
+                onPress={() => setNotificationType('general')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.typeEmoji}>📢</Text>
+                <Text style={[styles.typeTitle, notificationType === 'general' && { color: '#8B0000' }]}>
+                  Announcement
+                </Text>
+                <Text style={styles.typeSubtitle}>General update</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* ── Title ── */}
+            <Text style={styles.label}>TITLE *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter notification title..."
+              placeholderTextColor="#bbb"
+              value={title}
+              onChangeText={setTitle}
+              maxLength={255}
+            />
+
+            {/* ── Message ── */}
+            <Text style={styles.label}>MESSAGE *</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Write your message here..."
+              placeholderTextColor="#bbb"
+              value={message}
+              onChangeText={setMessage}
+              multiline
+              textAlignVertical="top"
+              maxLength={1000}
+            />
+            <Text style={styles.charCount}>{message.length} / 1000</Text>
+
+            {/* ── Severity (SOS only) ── */}
+            {notificationType === 'sos' && (
+              <>
+                <Text style={styles.label}>SEVERITY</Text>
+                <View style={styles.severityRow}>
+                  {[
+                    { value: 'critical', emoji: '🔴', label: 'Critical', color: '#ff3b30' },
+                    { value: 'warning',  emoji: '🟠', label: 'Warning',  color: '#ff9500' },
+                    { value: 'info',     emoji: '🔵', label: 'Info',     color: '#007AFF' },
+                  ].map(s => (
+                    <TouchableOpacity
+                      key={s.value}
+                      style={[
+                        styles.severityBtn,
+                        { borderColor: s.color },
+                        severity === s.value && { backgroundColor: s.color + '25' },
+                      ]}
+                      onPress={() => setSeverity(s.value)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.severityEmoji}>{s.emoji}</Text>
+                      <Text style={[
+                        styles.severityLabel,
+                        severity === s.value && { color: s.color, fontWeight: '700' },
+                      ]}>
+                        {s.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {/* ── Target Audience ── */}
+            <Text style={styles.label}>TARGET AUDIENCE</Text>
+
+            <TouchableOpacity
+              style={[styles.radioCard, targetAll && styles.radioCardActive]}
+              onPress={() => setTargetAll(true)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.radio, targetAll && styles.radioActive]}>
+                {targetAll && <View style={styles.radioDot} />}
+              </View>
+              <View>
+                <Text style={styles.radioTitle}>🌍 All Users</Text>
+                <Text style={styles.radioSub}>Broadcast to everyone in the app</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.radioCard, !targetAll && styles.radioCardActive]}
+              onPress={() => setTargetAll(false)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.radio, !targetAll && styles.radioActive]}>
+                {!targetAll && <View style={styles.radioDot} />}
+              </View>
+              <View>
+                <Text style={styles.radioTitle}>📍 Specific City</Text>
+                <Text style={styles.radioSub}>Target users in one city only</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* ── City Input ── */}
+            {!targetAll && (
+              <>
+                <Text style={styles.label}>CITY NAME *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Kathmandu, Pokhara, Lalitpur..."
+                  placeholderTextColor="#bbb"
+                  value={targetCity}
+                  onChangeText={setTargetCity}
+                  maxLength={100}
+                />
+              </>
+            )}
+
+            {/* ── Delivery Options ── */}
+            <Text style={styles.label}>DELIVERY OPTIONS</Text>
+
+            <View style={styles.switchCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.switchTitle}>🔔 Push Notification</Text>
+                <Text style={styles.switchSub}>Send as in-app push alert</Text>
+              </View>
+              <Switch
+                value={sendPush}
+                onValueChange={setSendPush}
+                trackColor={{ false: '#ddd', true: '#8B0000' }}
+                thumbColor="#fff"
+                ios_backgroundColor="#ddd"
+              />
+            </View>
+
+            <View style={styles.switchCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.switchTitle}>📱 SMS Alert</Text>
+                <Text style={styles.switchSub}>Also send via text message</Text>
+              </View>
+              <Switch
+                value={sendSms}
+                onValueChange={setSendSms}
+                trackColor={{ false: '#ddd', true: '#8B0000' }}
+                thumbColor="#fff"
+                ios_backgroundColor="#ddd"
+              />
+            </View>
+
+            {/* ── Live Preview ── */}
+            <Text style={styles.label}>PREVIEW</Text>
+            <View style={[styles.previewCard, { borderLeftColor: accentColor }]}>
+              <Text style={[styles.previewBadge, { color: accentColor }]}>
+                {notificationType === 'sos' ? '🚨 EMERGENCY ALERT' : '📢 ANNOUNCEMENT'}
+              </Text>
+              <Text style={styles.previewTitle}>
+                {title.trim() || 'Notification Title'}
+              </Text>
+              <Text style={styles.previewMsg}>
+                {message.trim() || 'Your message will appear here...'}
+              </Text>
+              <Text style={styles.previewMeta}>
+                To: {targetAll ? 'All Users' : (targetCity || 'Selected City')}
+                {sendPush ? '  🔔' : ''}{sendSms ? '  📱' : ''}
+              </Text>
+            </View>
+
+            {/* ── Send Button ── */}
+            <TouchableOpacity
+              style={[styles.sendBtn, loading && styles.sendBtnDisabled]}
+              onPress={handleSend}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={styles.sendBtnText}>
+                    {notificationType === 'sos' ? '🚨  Send SOS Alert' : '📢  Send Notification'}
+                  </Text>
+              }
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 50 }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </>
+  );
+};
+
+const styles = StyleSheet.create({
+  safeTop:   { flex: 0, backgroundColor: '#8B0000' },
+  container: { flex: 1, backgroundColor: '#f2f2f7' },
+
+  header: {
+    backgroundColor: '#8B0000',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  backBtn:     { padding: 4 },
+  backArrow:   { fontSize: 24, color: '#fff', fontWeight: '600' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
+
+  scrollContent: { padding: 16 },
+
+  label: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#8B0000',
+    letterSpacing: 1,
+    marginTop: 22,
+    marginBottom: 10,
+  },
+
+  typeRow: { flexDirection: 'row', gap: 12 },
+  typeCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e8e8e8',
+  },
+  typeCardActive: { borderColor: '#8B0000', backgroundColor: '#fff5f5' },
+  typeEmoji:    { fontSize: 30, marginBottom: 8 },
+  typeTitle:    { fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 3 },
+  typeSubtitle: { fontSize: 11, color: '#aaa', textAlign: 'center' },
+
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#e0e0e0',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#222',
+  },
+  textArea:  { minHeight: 110, textAlignVertical: 'top', paddingTop: 14 },
+  charCount: { fontSize: 11, color: '#bbb', textAlign: 'right', marginTop: 5 },
+
+  severityRow: { flexDirection: 'row', gap: 10 },
+  severityBtn: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 2,
+    paddingVertical: 12,
+    alignItems: 'center',
+    gap: 4,
+  },
+  severityEmoji: { fontSize: 18 },
+  severityLabel: { fontSize: 12, fontWeight: '600', color: '#555' },
+
+  radioCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: '#e8e8e8',
+  },
+  radioCardActive: { borderColor: '#8B0000', backgroundColor: '#fff5f5' },
+  radio: {
+    width: 22, height: 22, borderRadius: 11,
+    borderWidth: 2, borderColor: '#ccc',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  radioActive: { borderColor: '#8B0000' },
+  radioDot:    { width: 10, height: 10, borderRadius: 5, backgroundColor: '#8B0000' },
+  radioTitle:  { fontSize: 15, fontWeight: '600', color: '#222' },
+  radioSub:    { fontSize: 12, color: '#888', marginTop: 2 },
+
+  switchCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: '#e8e8e8',
+  },
+  switchTitle: { fontSize: 15, fontWeight: '600', color: '#222' },
+  switchSub:   { fontSize: 12, color: '#888', marginTop: 2 },
+
+  previewCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    borderLeftWidth: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  previewBadge: { fontSize: 11, fontWeight: '800', letterSpacing: 1, marginBottom: 8 },
+  previewTitle: { fontSize: 17, fontWeight: '700', color: '#111', marginBottom: 6 },
+  previewMsg:   { fontSize: 14, color: '#555', lineHeight: 21, marginBottom: 10 },
+  previewMeta:  { fontSize: 12, color: '#aaa' },
+
+  sendBtn: {
+    backgroundColor: '#8B0000',
+    borderRadius: 14,
+    paddingVertical: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+    shadowColor: '#8B0000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  sendBtnDisabled: { backgroundColor: '#c08080', elevation: 0, shadowOpacity: 0 },
+  sendBtnText:     { color: '#fff', fontSize: 17, fontWeight: '700', letterSpacing: 0.5 },
+
+  cancelBtn:     { paddingVertical: 16, alignItems: 'center', marginTop: 8 },
+  cancelBtnText: { color: '#999', fontSize: 15, fontWeight: '500' },
+});
+
+export default SendNotificationScreen;
