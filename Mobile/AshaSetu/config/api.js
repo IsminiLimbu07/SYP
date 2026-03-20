@@ -1,5 +1,5 @@
 // Previously used ngrok tunnel URL (kept here for reference):
-const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
+const NGROK_URL = 'https://valery-bridgeless-undesignedly.ngrok-free.dev';
 
 // Local IP configuration (commented out while using ngrok)
 // const API_BASE_URL = 'http://192.168.1.4:9000/api';

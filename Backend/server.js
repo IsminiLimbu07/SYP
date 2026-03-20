@@ -422,7 +422,7 @@ app.use((req, res) => {
 initDB().then(() => {
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on port ${PORT}`);
-        // console.log(`📲 Ngrok URL: https://tularaemic-electroneutral-ozella.ngrok-free.dev`); // kept for reference
+        console.log(`📲 Ngrok URL: https://valery-bridgeless-undesignedly.ngrok-free.dev`); // kept for reference
         console.log(`📍 API Base URL: http://0.0.0.0:${PORT}`);
         console.log(`🏥 Health check: http://localhost:${PORT}/`);
         console.log(`✨ Community features enabled!`);
