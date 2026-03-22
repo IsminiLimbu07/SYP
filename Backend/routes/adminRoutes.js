@@ -1,29 +1,34 @@
+
 import express from 'express';
 import {
   getAllUsers,
   getUserById,
   deleteUser,
   toggleUserStatus,
-  toggleAdminRole,
+  getDashboardStats,
+  // Add new volunteer management imports
+  getPendingVolunteerApplications,
+  getAllVolunteers,
+  approveVolunteer,
+  rejectVolunteer,
+  revokeVolunteerStatus,
 } from '../controllers/adminController.js';
 import { authenticateToken, isAdmin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// All admin routes require authentication + admin role
-// GET    /api/admin/users           — list all users with profile info
+// Existing user management routes
 router.get('/users', authenticateToken, isAdmin, getAllUsers);
-
-// GET    /api/admin/users/:id       — single user detail
 router.get('/users/:id', authenticateToken, isAdmin, getUserById);
-
-// DELETE /api/admin/users/:id       — delete user (cascades)
 router.delete('/users/:id', authenticateToken, isAdmin, deleteUser);
-
-// PATCH  /api/admin/users/:id/status — toggle active/suspended
 router.patch('/users/:id/status', authenticateToken, isAdmin, toggleUserStatus);
+router.get('/dashboard/stats', authenticateToken, isAdmin, getDashboardStats);
 
-// PATCH  /api/admin/users/:id/role   — promote/demote admin
-router.patch('/users/:id/role', authenticateToken, isAdmin, toggleAdminRole);
+// NEW: Volunteer management routes
+router.get('/volunteers/pending', authenticateToken, isAdmin, getPendingVolunteerApplications);
+router.get('/volunteers/all', authenticateToken, isAdmin, getAllVolunteers);
+router.put('/volunteers/:userId/approve', authenticateToken, isAdmin, approveVolunteer);
+router.put('/volunteers/:userId/reject', authenticateToken, isAdmin, rejectVolunteer);
+router.delete('/volunteers/:userId/revoke', authenticateToken, isAdmin, revokeVolunteerStatus);
 
 export default router;

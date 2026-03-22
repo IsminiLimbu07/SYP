@@ -210,3 +210,237 @@ export const getDashboardStats = async (req, res) => {
         res.status(500).json({ success: false, message: "Failed to fetch dashboard statistics" });
     }
 };
+
+// Get all pending volunteer applications
+export const getPendingVolunteerApplications = async (req, res) => {
+    try {
+        const applications = await sql`
+            SELECT
+                va.*,
+                u.full_name,
+                u.email,
+                u.phone_number,
+                up.blood_group,
+                up.city
+            FROM volunteer_applications va
+            JOIN users u ON va.user_id = u.user_id
+            LEFT JOIN user_profiles up ON u.user_id = up.user_id
+            WHERE va.status = 'pending'
+            ORDER BY va.created_at DESC
+        `;
+
+        res.status(200).json({
+            success: true,
+            count: applications.length,
+            data: applications
+        });
+
+    } catch (error) {
+        console.error('Error fetching pending applications:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch applications'
+        });
+    }
+};
+
+// Get all volunteers (approved)
+export const getAllVolunteers = async (req, res) => {
+    try {
+        const volunteers = await sql`
+            SELECT
+                u.user_id,
+                u.full_name,
+                u.email,
+                u.phone_number,
+                up.blood_group,
+                up.city,
+                up.volunteer_status,
+                up.volunteer_approved_at,
+                va.skills,
+                va.reason
+            FROM users u
+            JOIN user_profiles up ON u.user_id = up.user_id
+            LEFT JOIN volunteer_applications va ON u.user_id = va.user_id AND va.status = 'approved'
+            WHERE up.volunteer_status = 'approved'
+            ORDER BY up.volunteer_approved_at DESC
+        `;
+
+        res.status(200).json({
+            success: true,
+            count: volunteers.length,
+            data: volunteers
+        });
+
+    } catch (error) {
+        console.error('Error fetching volunteers:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch volunteers'
+        });
+    }
+};
+
+// Approve volunteer application
+export const approveVolunteer = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { admin_notes } = req.body;
+        const adminId = req.user.user_id;
+
+        // Check if application exists
+        const application = await sql`
+            SELECT * FROM volunteer_applications
+            WHERE user_id = ${userId} AND status = 'pending'
+        `;
+
+        if (application.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No pending application found for this user'
+            });
+        }
+
+        // Update application status
+        await sql`
+            UPDATE volunteer_applications
+            SET status = 'approved',
+                reviewed_by = ${adminId},
+                reviewed_at = NOW(),
+                admin_notes = ${admin_notes || null}
+            WHERE user_id = ${userId} AND status = 'pending'
+        `;
+
+        // Update user profile
+        await sql`
+            UPDATE user_profiles
+            SET volunteer_status = 'approved',
+                volunteer_approved_at = NOW(),
+                volunteer_approved_by = ${adminId}
+            WHERE user_id = ${userId}
+        `;
+
+        // Get user info for response
+        const user = await sql`
+            SELECT full_name, email FROM users WHERE user_id = ${userId}
+        `;
+
+        res.status(200).json({
+            success: true,
+            message: `${user[0].full_name} approved as volunteer`
+        });
+
+    } catch (error) {
+        console.error('Error approving volunteer:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to approve volunteer'
+        });
+    }
+};
+
+// Reject volunteer application
+export const rejectVolunteer = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { rejection_reason, admin_notes } = req.body;
+        const adminId = req.user.user_id;
+
+        if (!rejection_reason || rejection_reason.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide a rejection reason'
+            });
+        }
+
+        // Check if application exists
+        const application = await sql`
+            SELECT * FROM volunteer_applications
+            WHERE user_id = ${userId} AND status = 'pending'
+        `;
+
+        if (application.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No pending application found for this user'
+            });
+        }
+
+        // Update application status
+        await sql`
+            UPDATE volunteer_applications
+            SET status = 'rejected',
+                reviewed_by = ${adminId},
+                reviewed_at = NOW(),
+                admin_notes = ${admin_notes || null}
+            WHERE user_id = ${userId} AND status = 'pending'
+        `;
+
+        // Update user profile
+        await sql`
+            UPDATE user_profiles
+            SET volunteer_status = 'rejected',
+                volunteer_rejection_reason = ${rejection_reason}
+            WHERE user_id = ${userId}
+        `;
+
+        // Get user info for response
+        const user = await sql`
+            SELECT full_name FROM users WHERE user_id = ${userId}
+        `;
+
+        res.status(200).json({
+            success: true,
+            message: `${user[0].full_name}'s application rejected`
+        });
+
+    } catch (error) {
+        console.error('Error rejecting volunteer:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to reject application'
+        });
+    }
+};
+
+// Revoke volunteer status
+export const revokeVolunteerStatus = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { reason } = req.body;
+
+        // Update user profile
+        await sql`
+            UPDATE user_profiles
+            SET volunteer_status = 'none',
+                volunteer_approved_at = NULL,
+                volunteer_approved_by = NULL,
+                volunteer_rejection_reason = ${reason || 'Status revoked by admin'}
+            WHERE user_id = ${userId}
+        `;
+
+        // Update latest approved application to revoked status
+        await sql`
+            UPDATE volunteer_applications
+            SET status = 'rejected',
+                admin_notes = ${reason || 'Status revoked by admin'}
+            WHERE user_id = ${userId} AND status = 'approved'
+        `;
+
+        const user = await sql`
+            SELECT full_name FROM users WHERE user_id = ${userId}
+        `;
+
+        res.status(200).json({
+            success: true,
+            message: `Volunteer status revoked for ${user[0].full_name}`
+        });
+
+    } catch (error) {
+        console.error('Error revoking volunteer status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to revoke volunteer status'
+        });
+    }
+};
