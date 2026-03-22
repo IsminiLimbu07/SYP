@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -35,10 +35,22 @@ export default function DonationScreen({ navigation }) {
 
   useEffect(() => {
     fetchCampaigns();
-    // Refresh list every time the screen comes into focus so a newly created
-    // campaign (with or without an image) appears immediately.
     const unsub = navigation.addListener('focus', fetchCampaigns);
     return unsub;
+  }, [navigation]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          style={styles.createCampaignBtn}
+          onPress={() => navigation.navigate('CreateCampaign')}
+        >
+          <Ionicons name="add-circle" size={20} color="#fff" />
+          <Text style={styles.createCampaignText}>Create Campaign</Text>
+        </TouchableOpacity>
+      ),
+    });
   }, [navigation]);
 
   const fetchCampaigns = async () => {
@@ -83,32 +95,7 @@ export default function DonationScreen({ navigation }) {
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.container}>
-
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-        >
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Campaign</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => navigation.navigate('CreateCampaign')}
-        >
-          <Ionicons name="add-circle-outline" size={28} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Info banner ── */}
-      <View style={styles.infoBanner}>
-        <MaterialCommunityIcons name="information" size={18} color="#8B0000" />
-        <Text style={styles.infoBannerText}>
-          100% of donations go directly to medical expenses. Tap the + to
-          create a campaign.
-        </Text>
-      </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
 
       {/* ── Campaign list ── */}
       <ScrollView
@@ -265,6 +252,23 @@ export default function DonationScreen({ navigation }) {
 
         <View style={{ height: 30 }} />
       </ScrollView>
+      
+      {/* ── Bottom Navigation Bar ── */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
+          <MaterialCommunityIcons name="home-outline" size={20} color="#8A8A8A" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Donation')}>
+          <MaterialCommunityIcons name="hand-coin" size={20} color="#8A8A8A" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Community')}>
+          <MaterialCommunityIcons name="account-group-outline" size={20} color="#8A8A8A" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
+          <MaterialCommunityIcons name="account-outline" size={20} color="#8A8A8A" />
+        </TouchableOpacity>
+      </View>
+
     </SafeAreaView>
   );
 }
@@ -280,41 +284,21 @@ const styles = StyleSheet.create({
   },
   loadingText: { marginTop: 12, fontSize: 15, color: '#666' },
 
-  // Header
-  header: {
-    backgroundColor: '#8B0000',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  backBtn: { padding: 4 },
-  headerTitle: { color: '#fff', fontSize: 20, fontWeight: '700' },
-  addBtn: { padding: 4 },
-
-  // Info banner
-  infoBanner: {
-    backgroundColor: '#FFF9E5',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    marginHorizontal: 16,
-    marginTop: 14,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#8B0000',
-  },
-  infoBannerText: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 13,
-    color: '#444',
-    lineHeight: 18,
-  },
-
   // Scroll
   scroll: { flex: 1, paddingTop: 12 },
+
+  // Header right button
+  createCampaignBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    gap: 6,
+    marginRight: 8,
+  },
+  createCampaignText: { color: '#fff', fontSize: 13, fontWeight: '600' },
 
   // Empty state
   empty: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32 },
@@ -460,4 +444,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   donateBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+
+  // Bottom nav
+  bottomNav: {
+    flexDirection: 'row', backgroundColor: '#F2F2F2',
+    paddingVertical: 8, paddingHorizontal: 20,
+    justifyContent: 'space-around', borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    shadowColor: '#000', shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.04, shadowRadius: 2, elevation: 4,
+  },
+  navItem: { alignItems: 'center', paddingVertical: 10, flex: 1 },
 });

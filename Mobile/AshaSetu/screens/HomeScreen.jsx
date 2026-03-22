@@ -499,7 +499,7 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         {/* ── Safety Tips Carousel ── */}
-        <View style={[styles.section, { marginBottom: 100 }]}>
+        <View style={[styles.section, { marginBottom: 20 }]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>💡 Safety Tips</Text>
           </View>
@@ -544,8 +544,10 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* ── Bottom Navigation Bar ── */}
-       <View style={styles.bottomNav}>
+      </ScrollView>
+
+      {/* ── Bottom Navigation Bar ── */}
+      <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem}>
           <MaterialCommunityIcons name="home-outline" size={20} color="#8A8A8A" />
         </TouchableOpacity>
@@ -559,7 +561,6 @@ const HomeScreen = ({ navigation }) => {
           <MaterialCommunityIcons name="account-outline" size={20} color="#8A8A8A" />
         </TouchableOpacity>
       </View>
-      </ScrollView>
     </SafeAreaView>
   );
 };

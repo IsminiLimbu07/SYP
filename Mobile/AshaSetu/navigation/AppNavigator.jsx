@@ -98,7 +98,7 @@ const AppNavigator = () => {
           <Stack.Screen name="MyDonationResponses" component={MyDonationResponseScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Ambulance" component={AmbulanceScreen} options={{ title: 'Ambulance Services', ...darkRedHeader }} />
           <Stack.Screen name="FirstAid" component={FirstAidScreen} options={{ title: 'First Aid', ...darkRedHeader }} />
-          <Stack.Screen name="Donation" component={DonationScreen} options={{ title: 'Medical Fundraising', ...darkRedHeader }} />
+          <Stack.Screen name="Donation" component={DonationScreen} options={{ title: 'Fund Raising', ...darkRedHeader }} />
           <Stack.Screen name="Community" component={CommunityHomeScreen} options={{ headerShown: false }} />
           <Stack.Screen name="CommunityChatroom" component={CommunityChatroomScreen} options={{ headerShown: false }} />
           <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ title: 'Verify Email', ...darkRedHeader }} />

@@ -205,14 +205,16 @@ export default function CommunityHomeScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       
       
       {/* ── Header ── */}
       <View style={styles.header}>
-        
-        <Text style={styles.headerTitle}>Community</Text>
-        {isVolunteer && (
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle} numberOfLines={1}>Community</Text>
+        {isVolunteer ? (
           <TouchableOpacity
             style={styles.createEventBtn}
             onPress={() => navigation.navigate('CreateEvent')}
@@ -220,6 +222,8 @@ export default function CommunityHomeScreen({ navigation }) {
             <Ionicons name="add-circle" size={24} color="#fff" />
             <Text style={styles.createEventText}>Create Event</Text>
           </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
         )}
       </View>
 
@@ -402,6 +406,22 @@ export default function CommunityHomeScreen({ navigation }) {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* ── Bottom Navigation Bar ── */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Home')}>
+          <MaterialCommunityIcons name="home-outline" size={20} color="#8A8A8A" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Donation')}>
+          <MaterialCommunityIcons name="hand-coin" size={20} color="#8A8A8A" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Community')}>
+          <MaterialCommunityIcons name="account-group-outline" size={20} color="#8A8A8A" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile')}>
+          <MaterialCommunityIcons name="account-outline" size={20} color="#8A8A8A" />
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -413,13 +433,14 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#8B0000',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 30,
-    marginBottom: 20
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingTop: 40,
   },
-  headerTitle:    { fontSize: 20, fontWeight: '600', color: '#fff' },
+  backButton:  { padding: 4 },
+  headerTitle: { flex: 1, fontSize: 20, fontWeight: 'bold', color: '#fff', marginLeft: 8 },
   createEventBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -551,4 +572,15 @@ const styles = StyleSheet.create({
   registerBtnDisabled:   { backgroundColor: '#BDBDBD' },
   registerBtnText:       { color: '#fff', fontSize: 15, fontWeight: 'bold' },
   bottomSpacing:         { height: 20 },
+
+  // Bottom nav
+  bottomNav: {
+    flexDirection: 'row', backgroundColor: '#F2F2F2',
+    paddingVertical: 8, paddingHorizontal: 20,
+    justifyContent: 'space-around', borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    shadowColor: '#000', shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.04, shadowRadius: 2, elevation: 4,
+  },
+  navItem: { alignItems: 'center', paddingVertical: 10, flex: 1 },
 });
