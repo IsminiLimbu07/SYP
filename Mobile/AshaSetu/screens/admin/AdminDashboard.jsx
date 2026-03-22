@@ -1,5 +1,5 @@
 // Mobile/AshaSetu/screens/admin/AdminDashboard.jsx
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,6 @@ import {
   Modal,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';  // ← correct
 import { AuthContext } from '../../context/AuthContext';
 import { getUsers, deleteUser } from '../../api/admin';
@@ -41,6 +40,24 @@ const AdminDashboard = ({ navigation }) => {
   useEffect(() => {
     if (token) loadData();
   }, [token]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={{ flexDirection: 'row', gap: 8, marginRight: 4 }}>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => navigation.navigate('SendNotification')}
+          >
+            <Ionicons name="notifications-outline" size={22} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.headerBtn} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={22} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [navigation]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -126,26 +143,7 @@ const AdminDashboard = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Admin Dashboard</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.headerBtn}
-            onPress={() => navigation.navigate('SendNotification')}
-          >
-            <Ionicons name="notifications-outline" size={22} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerBtn} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={22} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
+    <View style={styles.container}>
       {/* ── Stats ── */}
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
@@ -165,6 +163,27 @@ const AdminDashboard = ({ navigation }) => {
           <Text style={styles.statLabel}>Active</Text>
         </View>
       </View>
+
+      
+      {/* Volunteer Management Card */}
+      <TouchableOpacity
+        style={styles.managementCard}
+        onPress={() => navigation.navigate('ManageVolunteers')}
+        activeOpacity={0.8}
+      >
+        <View style={styles.managementCardHeader}>
+          <View style={styles.managementCardIcon}>
+            <Ionicons name="people" size={24} color="#8B0000" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.managementCardTitle}>Volunteer Management</Text>
+            <Text style={styles.managementCardSubtitle}>
+              Review applications and manage volunteers
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </View>
+      </TouchableOpacity>
 
       {/* ── Search ── */}
       <View style={styles.searchBox}>
@@ -266,7 +285,7 @@ const AdminDashboard = ({ navigation }) => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -396,6 +415,44 @@ const styles = StyleSheet.create({
   modalBtnDelete: { backgroundColor: '#ff3b30' },
   modalBtnClose:  { backgroundColor: '#888' },
   modalBtnText:   { color: '#fff', fontSize: 16, fontWeight: '600' },
+
+  
+managementCard: {
+  backgroundColor: '#fff',
+  marginHorizontal: 12,
+  marginBottom: 12,
+  borderRadius: 12,
+  elevation: 2,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.05,
+  shadowRadius: 2,
+},
+managementCardHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  padding: 16,
+  gap: 12,
+},
+managementCardIcon: {
+  width: 48,
+  height: 48,
+  borderRadius: 24,
+  backgroundColor: '#fff5f5',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+managementCardTitle: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '#333',
+  marginBottom: 2,
+},
+managementCardSubtitle: {
+  fontSize: 13,
+  color: '#666',
+},
+
 });
 
 export default AdminDashboard;

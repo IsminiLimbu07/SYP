@@ -26,6 +26,9 @@ import RespondToRequestScreen   from '../screens/RespondToRequestScreen';
 import ManageResponseScreen     from '../screens/ManageResponseScreen';
 import MyDonationResponseScreen from '../screens/MyDonationResponseScreen';
 import VerifyEmailScreen        from '../screens/VerifyEmailScreen';
+import VolunteerApplicationScreen from '../screens/VolunteerApplicationScreen';
+import VolunteerStatusScreen from '../screens/VolunteerStatusScreen';
+import ManageVolunteersScreen from '../screens/admin/ManageVolunteersScreen';
 
 // ── Community Screens ─────────────────────────────────────────────────────────
 import CommunityHomeScreen      from '../screens/CommunityHomeScreen';
@@ -80,7 +83,7 @@ const AppNavigator = () => {
       {user ? (
         <>
           <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-          <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ headerShown: false }} />
+          <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ title: 'Admin Dashboard', ...darkRedHeader }} />
           <Stack.Screen name="SendNotification" component={SendNotificationScreen} options={{ title: 'Send Notification', ...darkRedHeader }} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications', ...darkRedHeader }} />
           <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ title: 'Create Event', ...darkRedHeader }} />
@@ -102,6 +105,9 @@ const AppNavigator = () => {
           <Stack.Screen name="Community" component={CommunityHomeScreen} options={{ title: 'Community', ...darkRedHeader }} />
           <Stack.Screen name="CommunityChatroom" component={CommunityChatroomScreen} options={{ headerShown: false }} />
           <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} options={{ title: 'Verify Email', ...darkRedHeader }} />
+          <Stack.Screen name="VolunteerApplication" component={VolunteerApplicationScreen} options={{ title: 'Become a Volunteer', ...darkRedHeader }} />
+          <Stack.Screen name="VolunteerStatus" component={VolunteerStatusScreen} options={{ title: 'Volunteer Status', ...darkRedHeader }} />
+          <Stack.Screen name="ManageVolunteers" component={ManageVolunteersScreen} options={{ title: 'Manage Volunteers', ...darkRedHeader }} />
         </>
       ) : (
         <>

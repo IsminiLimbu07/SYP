@@ -1,5 +1,5 @@
 // Mobile/AshaSetu/api/admin.js
-import { apiConfig } from '../config/api';
+import { apiConfig, makeRequest } from '../config/api'; // ✅ FIXED: added makeRequest import
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
@@ -107,4 +107,59 @@ export const deleteNotification = async (token, notificationId) => {
     throw new Error(data.message || 'Failed to delete notification');
   }
   return data;
+};
+
+// ─── Volunteer Management ─────────────────────────────────────────────────────
+
+// Get pending volunteer applications
+export const getPendingVolunteerApplications = async (token) => {
+  return makeRequest(apiConfig.ENDPOINTS.ADMIN.VOLUNTEERS_PENDING, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+};
+
+// Get all approved volunteers
+export const getAllVolunteers = async (token) => {
+  return makeRequest(apiConfig.ENDPOINTS.ADMIN.VOLUNTEERS_ALL, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+};
+
+// Approve volunteer
+export const approveVolunteer = async (token, userId, adminNotes = '') => {
+  return makeRequest(apiConfig.ENDPOINTS.ADMIN.VOLUNTEER_APPROVE(userId), {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ admin_notes: adminNotes }),
+  });
+};
+
+// Reject volunteer
+export const rejectVolunteer = async (token, userId, rejectionReason, adminNotes = '') => {
+  return makeRequest(apiConfig.ENDPOINTS.ADMIN.VOLUNTEER_REJECT(userId), {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ rejection_reason: rejectionReason, admin_notes: adminNotes }),
+  });
+};
+
+// Revoke volunteer status
+export const revokeVolunteerStatus = async (token, userId, reason = '') => {
+  return makeRequest(apiConfig.ENDPOINTS.ADMIN.VOLUNTEER_REVOKE(userId), {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ reason }),
+  });
 };

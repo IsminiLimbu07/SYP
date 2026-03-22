@@ -14,9 +14,8 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { apiConfig } from '../config/api';
+import { getMyVolunteerStatus } from '../api/volunteer';
 
-// apiConfig.BASE_URL is already set to your backend API base URL
-// (e.g., http://192.168.1.4:9000/api)
 const BASE = apiConfig.BASE_URL;
 
 const getFullImageUrl = (url) => {
@@ -29,12 +28,32 @@ const getFullImageUrl = (url) => {
 
 export default function CommunityHomeScreen({ navigation }) {
   const { token, user } = useContext(AuthContext);
+
   const [events, setEvents]                     = useState([]);
   const [loading, setLoading]                   = useState(true);
   const [refreshing, setRefreshing]             = useState(false);
   const [isVolunteer, setIsVolunteer]           = useState(user?.is_volunteer || false);
   const [registeredEvents, setRegisteredEvents] = useState({});
   const [registeringId, setRegisteringId]       = useState(null);
+
+  // ✅ FIXED: Moved inside the component (was outside before — caused the crash)
+  const [volunteerStatus, setVolunteerStatus] = useState('none');
+
+  // ✅ FIXED: Moved inside the component
+  const checkVolunteerStatus = async () => {
+    try {
+      const response = await getMyVolunteerStatus();
+      if (response.success) {
+        setVolunteerStatus(response.data.status);
+      }
+    } catch (error) {
+      console.log('Error checking volunteer status:', error);
+    }
+  };
+
+  useEffect(() => {
+    checkVolunteerStatus();
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -66,7 +85,6 @@ export default function CommunityHomeScreen({ navigation }) {
     await Promise.all([loadEvents(), fetchMyStatus()]);
   };
 
-  // GET <API_BASE>/community/events
   const loadEvents = async () => {
     try {
       const city = user?.profile?.city || user?.city || '';
@@ -89,7 +107,6 @@ export default function CommunityHomeScreen({ navigation }) {
     }
   };
 
-  // GET <API_BASE>/community/my-status
   const fetchMyStatus = async () => {
     try {
       const url = `${BASE}/community/my-status`;
@@ -108,7 +125,6 @@ export default function CommunityHomeScreen({ navigation }) {
     }
   };
 
-  // POST <API_BASE>/community/become-volunteer
   const handleBecomeVolunteer = () => {
     Alert.alert(
       'Become a Volunteer',
@@ -152,7 +168,6 @@ export default function CommunityHomeScreen({ navigation }) {
     );
   };
 
-  // POST / DELETE <API_BASE>/community/events/:id/register
   const handleRegister = async (eventId) => {
     setRegisteringId(eventId);
     const alreadyRegistered = registeredEvents[eventId];
@@ -206,10 +221,10 @@ export default function CommunityHomeScreen({ navigation }) {
   const getEventStatus = (event) => {
     const today     = new Date();
     const eventDate = new Date(event.event_date);
-    if (eventDate.toDateString() === today.toDateString()) return { text: 'TODAY',           color: '#FF5252' };
-    if (eventDate < today)                                  return { text: 'COMPLETED',        color: '#999'    };
+    if (eventDate.toDateString() === today.toDateString()) return { text: 'TODAY',             color: '#FF5252' };
+    if (eventDate < today)                                  return { text: 'COMPLETED',          color: '#999'    };
     const daysLeft = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
-    if (daysLeft === 1)                                     return { text: 'TOMORROW',         color: '#FF9800' };
+    if (daysLeft === 1)                                     return { text: 'TOMORROW',           color: '#FF9800' };
     return                                                         { text: `IN ${daysLeft} DAYS`, color: '#4CAF50' };
   };
 
@@ -254,29 +269,62 @@ export default function CommunityHomeScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={24} color="#8B0000" />
         </TouchableOpacity>
 
-        {/* ── Volunteer Card ── */}
-        {!isVolunteer ? (
+        {/* ── Volunteer Status Cards ── */}
+        {volunteerStatus === 'none' && (
           <TouchableOpacity
-            style={styles.volunteerCard}
-            onPress={handleBecomeVolunteer}
-            activeOpacity={0.85}
+            style={styles.volunteerButton}
+            onPress={() => navigation.navigate('VolunteerApplication')}
           >
-            <View style={styles.volunteerIconContainer}>
-              <MaterialCommunityIcons name="hand-heart" size={40} color="#8B0000" />
-            </View>
-            <View style={styles.volunteerContent}>
-              <Text style={styles.volunteerTitle}>⭐ Become a Volunteer</Text>
-              <Text style={styles.volunteerSubtitle}>
-                Help organise blood donation events and save lives
-              </Text>
-            </View>
-            <Ionicons name="arrow-forward" size={24} color="#8B0000" />
+            <Ionicons name="people" size={20} color="#8B0000" />
+            <Text style={styles.volunteerButtonText}>Become a Volunteer</Text>
           </TouchableOpacity>
-        ) : (
-          <View style={styles.volunteerBadgeCard}>
-            <MaterialCommunityIcons name="shield-star" size={28} color="#4CAF50" />
-            <Text style={styles.volunteerBadgeText}>You are a verified Volunteer ✓</Text>
-          </View>
+        )}
+
+        {volunteerStatus === 'pending' && (
+          <TouchableOpacity
+            style={[styles.volunteerButton, styles.volunteerButtonPending]}
+            onPress={() => navigation.navigate('VolunteerStatus')}
+          >
+            <Ionicons name="time" size={20} color="#ff9800" />
+            <Text style={[styles.volunteerButtonText, { color: '#ff9800' }]}>
+              Application Pending
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {volunteerStatus === 'approved' && (
+          <>
+            <TouchableOpacity
+              style={[styles.volunteerButton, styles.volunteerButtonApproved]}
+              onPress={() => navigation.navigate('CreateEvent')}
+            >
+              <Ionicons name="add-circle" size={20} color="#4caf50" />
+              <Text style={[styles.volunteerButtonText, { color: '#4caf50' }]}>
+                Create Event
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.volunteerButton, styles.volunteerButtonApproved]}
+              onPress={() => navigation.navigate('CreateCampaign')}
+            >
+              <Ionicons name="megaphone" size={20} color="#4caf50" />
+              <Text style={[styles.volunteerButtonText, { color: '#4caf50' }]}>
+                Create Campaign
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {volunteerStatus === 'rejected' && (
+          <TouchableOpacity
+            style={[styles.volunteerButton, styles.volunteerButtonRejected]}
+            onPress={() => navigation.navigate('VolunteerStatus')}
+          >
+            <Ionicons name="close-circle" size={20} color="#f44336" />
+            <Text style={[styles.volunteerButtonText, { color: '#f44336' }]}>
+              Application Rejected - View Details
+            </Text>
+          </TouchableOpacity>
         )}
 
         {/* ── Events Section ── */}
@@ -464,6 +512,34 @@ const styles = StyleSheet.create({
   chatroomContent:  { flex: 1 },
   chatroomTitle:    { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 4 },
   chatroomSubtitle: { fontSize: 13, color: '#666' },
+  volunteerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff5f5',
+    borderWidth: 1,
+    borderColor: '#8B0000',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 12,
+    gap: 10,
+  },
+  volunteerButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#8B0000',
+  },
+  volunteerButtonPending: {
+    backgroundColor: '#fff3e0',
+    borderColor: '#ff9800',
+  },
+  volunteerButtonApproved: {
+    backgroundColor: '#e8f5e9',
+    borderColor: '#4caf50',
+  },
+  volunteerButtonRejected: {
+    backgroundColor: '#ffebee',
+    borderColor: '#f44336',
+  },
   volunteerCard: {
     backgroundColor: '#FFF9E5',
     flexDirection: 'row',
@@ -558,8 +634,6 @@ const styles = StyleSheet.create({
   registerBtnDisabled:   { backgroundColor: '#BDBDBD' },
   registerBtnText:       { color: '#fff', fontSize: 15, fontWeight: 'bold' },
   bottomSpacing:         { height: 20 },
-
-  // Bottom nav
   bottomNav: {
     flexDirection: 'row', backgroundColor: '#F2F2F2',
     paddingVertical: 8, paddingHorizontal: 20,

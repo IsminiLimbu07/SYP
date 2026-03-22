@@ -1,15 +1,3 @@
-import { Text, View } from "react-native";
-
-export default function Index() {
-  return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Text>Edit app/index.tsx to edit this screen.</Text>
-    </View>
-  );
-}
+// This file is managed by App.js and AppNavigator.jsx
+// Navigation is handled by React Navigation, not Expo Router
+export { default } from '../App';
