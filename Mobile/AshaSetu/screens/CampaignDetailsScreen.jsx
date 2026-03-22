@@ -206,13 +206,15 @@ export default function CampaignDetailsScreen({ route, navigation }) {
         </View>
       </ScrollView>
 
-      {/* Sticky Donate Button */}
-      <View style={styles.stickyBar}>
-        <TouchableOpacity style={styles.donateBtn} onPress={() => setShowDonateModal(true)}>
-          <Text style={styles.khaltiPill}>🟣</Text>
-          <Text style={styles.donateBtnText}>Donate via Khalti</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Sticky Donate Button - Only show if NOT the creator */}
+      {campaign.creator_id !== user?.user_id && (
+        <View style={styles.stickyBar}>
+          <TouchableOpacity style={styles.donateBtn} onPress={() => setShowDonateModal(true)}>
+            <Text style={styles.khaltiPill}>🟣</Text>
+            <Text style={styles.donateBtnText}>Donate via Khalti</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Donation Modal */}
       <Modal
