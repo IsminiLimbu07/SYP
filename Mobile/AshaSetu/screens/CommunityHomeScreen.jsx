@@ -1,5 +1,5 @@
 // frontend/src/screens/CommunityHomeScreen.jsx
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { apiConfig } from '../config/api';
@@ -43,6 +42,25 @@ export default function CommunityHomeScreen({ navigation }) {
     const unsub = navigation.addListener('focus', loadData);
     return unsub;
   }, [navigation, token, user?.profile?.city]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: 'Community',
+      headerStyle: { backgroundColor: '#8B0000' },
+      headerTintColor: '#fff',
+      headerTitleStyle: { fontWeight: 'bold', fontSize: 20 },
+      headerRight: () =>
+        isVolunteer ? (
+          <TouchableOpacity
+            style={styles.createEventBtn}
+            onPress={() => navigation.navigate('CreateEvent')}
+          >
+            <Ionicons name="add-circle" size={24} color="#fff" />
+            <Text style={styles.createEventText}>Create Event</Text>
+          </TouchableOpacity>
+        ) : null,
+    });
+  }, [navigation, isVolunteer]);
 
   const loadData = async () => {
     await Promise.all([loadEvents(), fetchMyStatus()]);
@@ -205,28 +223,7 @@ export default function CommunityHomeScreen({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      
-      
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>Community</Text>
-        {isVolunteer ? (
-          <TouchableOpacity
-            style={styles.createEventBtn}
-            onPress={() => navigation.navigate('CreateEvent')}
-          >
-            <Ionicons name="add-circle" size={24} color="#fff" />
-            <Text style={styles.createEventText}>Create Event</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
-      </View>
-
+    <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -422,7 +419,7 @@ export default function CommunityHomeScreen({ navigation }) {
           <MaterialCommunityIcons name="account-outline" size={20} color="#8A8A8A" />
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -430,17 +427,6 @@ const styles = StyleSheet.create({
   container:           { flex: 1, backgroundColor: '#F5F5F5' },
   loadingContainer:    { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' },
   loadingText:         { marginTop: 10, fontSize: 16, color: '#666' },
-  header: {
-    backgroundColor: '#8B0000',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingTop: 40,
-  },
-  backButton:  { padding: 4 },
-  headerTitle: { flex: 1, fontSize: 20, fontWeight: 'bold', color: '#fff', marginLeft: 8 },
   createEventBtn: {
     flexDirection: 'row',
     alignItems: 'center',
