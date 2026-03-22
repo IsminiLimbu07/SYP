@@ -1,7 +1,4 @@
 // Mobile/AshaSetu/screens/admin/SendNotificationScreen.jsx
-// FIXED VERSION — completely standalone screen with its own header
-// Place at: screens/admin/SendNotificationScreen.jsx
-
 import React, { useState, useContext } from 'react';
 import {
   View,
@@ -15,7 +12,6 @@ import {
   Switch,
   KeyboardAvoidingView,
   Platform,
-  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../../context/AuthContext';
@@ -89,262 +85,226 @@ const SendNotificationScreen = ({ navigation }) => {
   const accentColor = notificationType === 'sos' ? '#ff3b30' : '#007AFF';
 
   return (
-    <>
-      <StatusBar barStyle="light-content" backgroundColor="#8B0000" />
-      <SafeAreaView style={styles.safeTop} />
-      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
-
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backBtn}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Text style={styles.backArrow}>{'←'}</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Send Notification</Text>
-          <View style={{ width: 44 }} />
-        </View>
-
-        {/* ── Scrollable Form ── */}
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+
+          {/* ── Type Selector ── */}
+          <Text style={styles.label}>NOTIFICATION TYPE</Text>
+          <View style={styles.typeRow}>
+            <TouchableOpacity
+              style={[styles.typeCard, notificationType === 'sos' && styles.typeCardActive]}
+              onPress={() => setNotificationType('sos')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.typeEmoji}>🚨</Text>
+              <Text style={[styles.typeTitle, notificationType === 'sos' && { color: '#8B0000' }]}>
+                SOS Alert
+              </Text>
+              <Text style={styles.typeSubtitle}>Critical emergency</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.typeCard, notificationType === 'general' && styles.typeCardActive]}
+              onPress={() => setNotificationType('general')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.typeEmoji}>📢</Text>
+              <Text style={[styles.typeTitle, notificationType === 'general' && { color: '#8B0000' }]}>
+                Announcement
+              </Text>
+              <Text style={styles.typeSubtitle}>General update</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Title ── */}
+          <Text style={styles.label}>TITLE *</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter notification title..."
+            placeholderTextColor="#bbb"
+            value={title}
+            onChangeText={setTitle}
+            maxLength={255}
+          />
+
+          {/* ── Message ── */}
+          <Text style={styles.label}>MESSAGE *</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Write your message here..."
+            placeholderTextColor="#bbb"
+            value={message}
+            onChangeText={setMessage}
+            multiline
+            textAlignVertical="top"
+            maxLength={1000}
+          />
+          <Text style={styles.charCount}>{message.length} / 1000</Text>
+
+          {/* ── Severity (SOS only) ── */}
+          {notificationType === 'sos' && (
+            <>
+              <Text style={styles.label}>SEVERITY</Text>
+              <View style={styles.severityRow}>
+                {[
+                  { value: 'critical', emoji: '🔴', label: 'Critical', color: '#ff3b30' },
+                  { value: 'warning',  emoji: '🟠', label: 'Warning',  color: '#ff9500' },
+                  { value: 'info',     emoji: '🔵', label: 'Info',     color: '#007AFF' },
+                ].map(s => (
+                  <TouchableOpacity
+                    key={s.value}
+                    style={[
+                      styles.severityBtn,
+                      { borderColor: s.color },
+                      severity === s.value && { backgroundColor: s.color + '25' },
+                    ]}
+                    onPress={() => setSeverity(s.value)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.severityEmoji}>{s.emoji}</Text>
+                    <Text style={[
+                      styles.severityLabel,
+                      severity === s.value && { color: s.color, fontWeight: '700' },
+                    ]}>
+                      {s.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
+
+          {/* ── Target Audience ── */}
+          <Text style={styles.label}>TARGET AUDIENCE</Text>
+
+          <TouchableOpacity
+            style={[styles.radioCard, targetAll && styles.radioCardActive]}
+            onPress={() => setTargetAll(true)}
+            activeOpacity={0.8}
           >
-
-            {/* ── Type Selector ── */}
-            <Text style={styles.label}>NOTIFICATION TYPE</Text>
-            <View style={styles.typeRow}>
-              <TouchableOpacity
-                style={[styles.typeCard, notificationType === 'sos' && styles.typeCardActive]}
-                onPress={() => setNotificationType('sos')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.typeEmoji}>🚨</Text>
-                <Text style={[styles.typeTitle, notificationType === 'sos' && { color: '#8B0000' }]}>
-                  SOS Alert
-                </Text>
-                <Text style={styles.typeSubtitle}>Critical emergency</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.typeCard, notificationType === 'general' && styles.typeCardActive]}
-                onPress={() => setNotificationType('general')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.typeEmoji}>📢</Text>
-                <Text style={[styles.typeTitle, notificationType === 'general' && { color: '#8B0000' }]}>
-                  Announcement
-                </Text>
-                <Text style={styles.typeSubtitle}>General update</Text>
-              </TouchableOpacity>
+            <View style={[styles.radio, targetAll && styles.radioActive]}>
+              {targetAll && <View style={styles.radioDot} />}
             </View>
+            <View>
+              <Text style={styles.radioTitle}>🌍 All Users</Text>
+              <Text style={styles.radioSub}>Broadcast to everyone in the app</Text>
+            </View>
+          </TouchableOpacity>
 
-            {/* ── Title ── */}
-            <Text style={styles.label}>TITLE *</Text>
+          <TouchableOpacity
+            style={[styles.radioCard, !targetAll && styles.radioCardActive]}
+            onPress={() => setTargetAll(false)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.radio, !targetAll && styles.radioActive]}>
+              {!targetAll && <View style={styles.radioDot} />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.radioTitle}>📍 Specific City</Text>
+              <Text style={styles.radioSub}>Target users in a specific location</Text>
+            </View>
+          </TouchableOpacity>
+
+          {!targetAll && (
             <TextInput
-              style={styles.input}
-              placeholder="Enter notification title..."
+              style={[styles.input, { marginBottom: 16 }]}
+              placeholder="Enter city name (e.g., Kathmandu, Pokhara)..."
               placeholderTextColor="#bbb"
-              value={title}
-              onChangeText={setTitle}
-              maxLength={255}
+              value={targetCity}
+              onChangeText={setTargetCity}
+              maxLength={50}
             />
+          )}
 
-            {/* ── Message ── */}
-            <Text style={styles.label}>MESSAGE *</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Write your message here..."
-              placeholderTextColor="#bbb"
-              value={message}
-              onChangeText={setMessage}
-              multiline
-              textAlignVertical="top"
-              maxLength={1000}
+          {/* ── Delivery Options ── */}
+          <Text style={styles.label}>DELIVERY OPTIONS</Text>
+
+          <View style={styles.switchCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.switchTitle}>🔔 Push Notification</Text>
+              <Text style={styles.switchSub}>Send as in-app push alert</Text>
+            </View>
+            <Switch
+              value={sendPush}
+              onValueChange={setSendPush}
+              trackColor={{ false: '#ddd', true: '#8B0000' }}
+              thumbColor="#fff"
+              ios_backgroundColor="#ddd"
             />
-            <Text style={styles.charCount}>{message.length} / 1000</Text>
+          </View>
 
-            {/* ── Severity (SOS only) ── */}
-            {notificationType === 'sos' && (
-              <>
-                <Text style={styles.label}>SEVERITY</Text>
-                <View style={styles.severityRow}>
-                  {[
-                    { value: 'critical', emoji: '🔴', label: 'Critical', color: '#ff3b30' },
-                    { value: 'warning',  emoji: '🟠', label: 'Warning',  color: '#ff9500' },
-                    { value: 'info',     emoji: '🔵', label: 'Info',     color: '#007AFF' },
-                  ].map(s => (
-                    <TouchableOpacity
-                      key={s.value}
-                      style={[
-                        styles.severityBtn,
-                        { borderColor: s.color },
-                        severity === s.value && { backgroundColor: s.color + '25' },
-                      ]}
-                      onPress={() => setSeverity(s.value)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.severityEmoji}>{s.emoji}</Text>
-                      <Text style={[
-                        styles.severityLabel,
-                        severity === s.value && { color: s.color, fontWeight: '700' },
-                      ]}>
-                        {s.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </>
-            )}
-
-            {/* ── Target Audience ── */}
-            <Text style={styles.label}>TARGET AUDIENCE</Text>
-
-            <TouchableOpacity
-              style={[styles.radioCard, targetAll && styles.radioCardActive]}
-              onPress={() => setTargetAll(true)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.radio, targetAll && styles.radioActive]}>
-                {targetAll && <View style={styles.radioDot} />}
-              </View>
-              <View>
-                <Text style={styles.radioTitle}>🌍 All Users</Text>
-                <Text style={styles.radioSub}>Broadcast to everyone in the app</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.radioCard, !targetAll && styles.radioCardActive]}
-              onPress={() => setTargetAll(false)}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.radio, !targetAll && styles.radioActive]}>
-                {!targetAll && <View style={styles.radioDot} />}
-              </View>
-              <View>
-                <Text style={styles.radioTitle}>📍 Specific City</Text>
-                <Text style={styles.radioSub}>Target users in one city only</Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* ── City Input ── */}
-            {!targetAll && (
-              <>
-                <Text style={styles.label}>CITY NAME *</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. Kathmandu, Pokhara, Lalitpur..."
-                  placeholderTextColor="#bbb"
-                  value={targetCity}
-                  onChangeText={setTargetCity}
-                  maxLength={100}
-                />
-              </>
-            )}
-
-            {/* ── Delivery Options ── */}
-            <Text style={styles.label}>DELIVERY OPTIONS</Text>
-
-            <View style={styles.switchCard}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.switchTitle}>🔔 Push Notification</Text>
-                <Text style={styles.switchSub}>Send as in-app push alert</Text>
-              </View>
-              <Switch
-                value={sendPush}
-                onValueChange={setSendPush}
-                trackColor={{ false: '#ddd', true: '#8B0000' }}
-                thumbColor="#fff"
-                ios_backgroundColor="#ddd"
-              />
+          <View style={styles.switchCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.switchTitle}>📱 SMS Alert</Text>
+              <Text style={styles.switchSub}>Also send via text message</Text>
             </View>
+            <Switch
+              value={sendSms}
+              onValueChange={setSendSms}
+              trackColor={{ false: '#ddd', true: '#8B0000' }}
+              thumbColor="#fff"
+              ios_backgroundColor="#ddd"
+            />
+          </View>
 
-            <View style={styles.switchCard}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.switchTitle}>📱 SMS Alert</Text>
-                <Text style={styles.switchSub}>Also send via text message</Text>
-              </View>
-              <Switch
-                value={sendSms}
-                onValueChange={setSendSms}
-                trackColor={{ false: '#ddd', true: '#8B0000' }}
-                thumbColor="#fff"
-                ios_backgroundColor="#ddd"
-              />
-            </View>
+          {/* ── Live Preview ── */}
+          <Text style={styles.label}>PREVIEW</Text>
+          <View style={[styles.previewCard, { borderLeftColor: accentColor }]}>
+            <Text style={[styles.previewBadge, { color: accentColor }]}>
+              {notificationType === 'sos' ? '🚨 EMERGENCY ALERT' : '📢 ANNOUNCEMENT'}
+            </Text>
+            <Text style={styles.previewTitle}>
+              {title.trim() || 'Notification Title'}
+            </Text>
+            <Text style={styles.previewMsg}>
+              {message.trim() || 'Your message will appear here...'}
+            </Text>
+            <Text style={styles.previewMeta}>
+              To: {targetAll ? 'All Users' : (targetCity || 'Selected City')}
+              {sendPush ? '  🔔' : ''}{sendSms ? '  📱' : ''}
+            </Text>
+          </View>
 
-            {/* ── Live Preview ── */}
-            <Text style={styles.label}>PREVIEW</Text>
-            <View style={[styles.previewCard, { borderLeftColor: accentColor }]}>
-              <Text style={[styles.previewBadge, { color: accentColor }]}>
-                {notificationType === 'sos' ? '🚨 EMERGENCY ALERT' : '📢 ANNOUNCEMENT'}
-              </Text>
-              <Text style={styles.previewTitle}>
-                {title.trim() || 'Notification Title'}
-              </Text>
-              <Text style={styles.previewMsg}>
-                {message.trim() || 'Your message will appear here...'}
-              </Text>
-              <Text style={styles.previewMeta}>
-                To: {targetAll ? 'All Users' : (targetCity || 'Selected City')}
-                {sendPush ? '  🔔' : ''}{sendSms ? '  📱' : ''}
-              </Text>
-            </View>
+          {/* ── Send Button ── */}
+          <TouchableOpacity
+            style={[styles.sendBtn, loading && styles.sendBtnDisabled]}
+            onPress={handleSend}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Text style={styles.sendBtnText}>
+                  {notificationType === 'sos' ? '🚨  Send SOS Alert' : '📢  Send Notification'}
+                </Text>
+            }
+          </TouchableOpacity>
 
-            {/* ── Send Button ── */}
-            <TouchableOpacity
-              style={[styles.sendBtn, loading && styles.sendBtnDisabled]}
-              onPress={handleSend}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              {loading
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={styles.sendBtnText}>
-                    {notificationType === 'sos' ? '🚨  Send SOS Alert' : '📢  Send Notification'}
-                  </Text>
-              }
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.cancelBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.cancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.75}
-            >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-
-            <View style={{ height: 50 }} />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </>
+          <View style={{ height: 50 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeTop:   { flex: 0, backgroundColor: '#8B0000' },
   container: { flex: 1, backgroundColor: '#f2f2f7' },
-
-  header: {
-    backgroundColor: '#8B0000',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  backBtn:     { padding: 4 },
-  backArrow:   { fontSize: 24, color: '#fff', fontWeight: '600' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
 
   scrollContent: { padding: 16 },
 

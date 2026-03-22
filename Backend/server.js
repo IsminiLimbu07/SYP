@@ -1,7 +1,3 @@
-// ============================================
-// UPDATED server.js - Add volunteer tables to initDB()
-// ============================================
-
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -14,19 +10,23 @@ import donorRoutes from './routes/donorRoutes.js';
 import communityRoutes from './routes/communityRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import campaignRoutes from './routes/campaignRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js'; // ← NEW
 import notificationRoutes from './routes/notificationRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
-import volunteerRoutes from './routes/volunteerRoutes.js'; // ✅ NEW
+import volunteerRoutes from './routes/volunteerRoutes.js';
 
 dotenv.config();
 
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ── Serve static files (images, uploads) ─────────────────────────────────────
+app.use('/uploads', express.static('uploads'));
+app.use(express.static('public')); // Optional: for other static files
 
 const PORT = process.env.PORT || 9000;
 
@@ -80,35 +80,18 @@ async function initDB() {
       )
     `;
 
-    // ✅ NEW: Add volunteer status columns to user_profiles
-    // This uses "ADD COLUMN IF NOT EXISTS" so it won't break if columns already exist
+    // Volunteer status columns (safe to run multiple times)
     await sql`
       ALTER TABLE user_profiles 
       ADD COLUMN IF NOT EXISTS volunteer_status VARCHAR(20) DEFAULT 'none' 
         CHECK (volunteer_status IN ('none', 'pending', 'approved', 'rejected'))
     `;
+    await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS volunteer_requested_at TIMESTAMP`;
+    await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS volunteer_approved_at TIMESTAMP`;
+    await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS volunteer_approved_by INTEGER REFERENCES users(user_id)`;
+    await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS volunteer_rejection_reason TEXT`;
 
-    await sql`
-      ALTER TABLE user_profiles 
-      ADD COLUMN IF NOT EXISTS volunteer_requested_at TIMESTAMP
-    `;
-
-    await sql`
-      ALTER TABLE user_profiles 
-      ADD COLUMN IF NOT EXISTS volunteer_approved_at TIMESTAMP
-    `;
-
-    await sql`
-      ALTER TABLE user_profiles 
-      ADD COLUMN IF NOT EXISTS volunteer_approved_by INTEGER REFERENCES users(user_id)
-    `;
-
-    await sql`
-      ALTER TABLE user_profiles 
-      ADD COLUMN IF NOT EXISTS volunteer_rejection_reason TEXT
-    `;
-
-    // ✅ NEW: Table 3: Volunteer Applications ────────────────────────────────
+    // ── Table 3: Volunteer Applications ────────────────────────────────────
     await sql`
       CREATE TABLE IF NOT EXISTS volunteer_applications (
         application_id SERIAL PRIMARY KEY,
@@ -124,16 +107,8 @@ async function initDB() {
       )
     `;
 
-    // ✅ NEW: Create indexes for faster queries
-    await sql`
-      CREATE INDEX IF NOT EXISTS idx_volunteer_applications_status 
-      ON volunteer_applications(status)
-    `;
-
-    await sql`
-      CREATE INDEX IF NOT EXISTS idx_volunteer_applications_user_id 
-      ON volunteer_applications(user_id)
-    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_volunteer_applications_status ON volunteer_applications(status)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_volunteer_applications_user_id ON volunteer_applications(user_id)`;
 
     // ── Table 4: Blood Requests ─────────────────────────────────────────────
     await sql`
@@ -229,34 +204,66 @@ async function initDB() {
       )
     `;
 
-    // ── Table 10: Fundraising Campaigns ─────────────────────────────────────
+    // ── Table 10: Campaigns ─────────────────────────────────────────────────
+    // Single source of truth — replaces the old "fundraising_campaigns" table.
+    // status flow: pending → active (approved) or rejected
     await sql`
-      CREATE TABLE IF NOT EXISTS fundraising_campaigns (
+      CREATE TABLE IF NOT EXISTS campaigns (
         campaign_id SERIAL PRIMARY KEY,
         creator_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
         patient_name VARCHAR(255) NOT NULL,
-        title VARCHAR(255) NOT NULL,
-        description TEXT NOT NULL,
-        story TEXT,
+        age INTEGER,
+        condition VARCHAR(255) NOT NULL,
+        hospital_name VARCHAR(255) NOT NULL,
+        city VARCHAR(100) NOT NULL,
         target_amount DECIMAL(10, 2) NOT NULL,
-        amount_raised DECIMAL(10, 2) DEFAULT 0,
-        medical_documents TEXT[],
-        photos TEXT[],
-        hospital_name VARCHAR(255),
-        deadline TIMESTAMP,
-        status VARCHAR(20) DEFAULT 'active' 
-          CHECK (status IN ('pending_approval', 'active', 'completed', 'cancelled')),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        deadline TIMESTAMP NOT NULL,
+        story TEXT NOT NULL,
+        image_url TEXT,
+        status VARCHAR(20) DEFAULT 'pending'
+          CHECK (status IN ('pending', 'active', 'completed', 'rejected', 'cancelled')),
+        reviewed_by INTEGER REFERENCES users(user_id),
+        reviewed_at TIMESTAMP,
+        rejection_reason TEXT,
+        admin_notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    // Safe migration: add review columns if campaigns table already existed
+    await sql`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS reviewed_by INTEGER REFERENCES users(user_id)`;
+    await sql`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP`;
+    await sql`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS rejection_reason TEXT`;
+    await sql`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS admin_notes TEXT`;
+
+    // Fix the constraint: Drop and recreate to ensure 'pending' is allowed
+    try {
+      await sql`ALTER TABLE campaigns DROP CONSTRAINT IF EXISTS campaigns_status_check CASCADE`;
+    } catch (e) {
+      // Constraint may not exist, that's ok
+    }
+
+    // Add the corrected constraint
+    await sql`
+      ALTER TABLE campaigns 
+      ADD CONSTRAINT campaigns_status_check 
+      CHECK (status IN ('pending', 'active', 'completed', 'rejected', 'cancelled'))
+    `;
+
+    await sql`CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_campaigns_creator ON campaigns(creator_id)`;
 
     // ── Table 11: Campaign Donations ────────────────────────────────────────
     await sql`
       CREATE TABLE IF NOT EXISTS campaign_donations (
         donation_id SERIAL PRIMARY KEY,
-        campaign_id INTEGER REFERENCES fundraising_campaigns(campaign_id) ON DELETE CASCADE,
+        campaign_id INTEGER REFERENCES campaigns(campaign_id) ON DELETE CASCADE,
         donor_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+        donor_name VARCHAR(255),
         amount DECIMAL(10, 2) NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending'
+          CHECK (status IN ('pending', 'completed', 'failed')),
         is_anonymous BOOLEAN DEFAULT false,
         message TEXT,
         payment_method VARCHAR(50),
@@ -280,7 +287,8 @@ async function initDB() {
     `;
 
     console.log('✅ Database initialized successfully!');
-    console.log('✅ Volunteer application system tables created!');
+    console.log('✅ Campaign approval system ready!');
+    console.log('✅ Volunteer application system ready!');
 
   } catch (error) {
     console.error('❌ Error initializing database:', error);
@@ -297,31 +305,33 @@ app.get('/', (req, res) => {
     message: 'AshaSetu API Server is running 🚀',
     version: '1.0.0',
     endpoints: {
-      auth: '/api/auth',
-      blood: '/api/blood',
-      donors: '/api/donors',
-      community: '/api/community',
-      chat: '/api/chat',
-      campaigns: '/api/campaigns',
+      auth:          '/api/auth',
+      blood:         '/api/blood',
+      donors:        '/api/donors',
+      community:     '/api/community',
+      chat:          '/api/chat',
+      campaigns:     '/api/campaigns',
+      payment:       '/api/payment', // ← NEW
       notifications: '/api/notifications',
-      admin: '/api/admin',
-      volunteer: '/api/volunteer', // ✅ NEW
-      upload: '/api/upload',
+      admin:         '/api/admin',
+      volunteer:     '/api/volunteer',
+      upload:        '/api/upload',
     }
   });
 });
 
-// Register routes
-app.use('/api/auth', authRoutes);
-app.use('/api/blood', bloodRoutes);
-app.use('/api/donors', donorRoutes);
-app.use('/api/community', communityRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/campaigns', campaignRoutes);
+app.use('/api/auth',          authRoutes);
+app.use('/api/blood',         bloodRoutes);
+app.use('/api/donors',        donorRoutes);
+app.use('/api/community',     communityRoutes);
+app.use('/api/chat',          chatRoutes);
+app.use('/api/campaigns',     campaignRoutes);
+app.use('/api/payment',       paymentRoutes); // ← NEW
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/volunteer', volunteerRoutes); // ✅ NEW
-app.use('/api/upload', uploadRoutes);
+app.use('/api/admin',         adminRoutes);
+app.use('/api/volunteer',     volunteerRoutes);
+app.use('/api/upload',        uploadRoutes);
+app.use('/api/payment',       paymentRoutes);
 
 // ============================================
 // START SERVER
@@ -331,87 +341,10 @@ initDB().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📍 API Base URL: http://localhost:${PORT}`);
-    console.log(`📝 Health check: http://localhost:${PORT}/`);
     console.log(`🩸 Blood requests: http://localhost:${PORT}/api/blood/requests`);
-    console.log(`👥 Volunteer system: http://localhost:${PORT}/api/volunteer`);
+    console.log(`💰 Campaigns:      http://localhost:${PORT}/api/campaigns`);
+    console.log(`👥 Volunteers:     http://localhost:${PORT}/api/volunteer`);
   });
 });
 
 export default app;
-
-
-// ============================================
-// EXPLANATION OF HOW THIS WORKS
-// ============================================
-
-/*
-🔍 Why this approach is better for your team:
-
-1. **Automatic Setup**
-   - When teammate clones repo from GitHub
-   - Runs `npm install`
-   - Runs `npm run dev`
-   - Database tables are created automatically!
-
-2. **Version Control**
-   - SQL changes are in Git
-   - Everyone gets same database structure
-   - No manual steps needed
-
-3. **Safe Updates**
-   - "ADD COLUMN IF NOT EXISTS" won't break if column exists
-   - "CREATE TABLE IF NOT EXISTS" won't break if table exists
-   - Can run multiple times safely
-
-4. **Team Collaboration**
-   - Person A adds a new table
-   - Commits to GitHub
-   - Person B pulls the code
-   - Their database updates automatically!
-
-5. **No Manual SQL Required**
-   - No need to open Neon dashboard
-   - No need to copy-paste SQL
-   - Just `git pull` and `npm run dev`
-
-
-🎯 What happens when you start the server:
-
-1. Server starts
-2. initDB() runs
-3. Creates all tables (if they don't exist)
-4. Adds new columns (if they don't exist)
-5. Creates indexes
-6. Server ready!
-
-Output you'll see:
-🔧 Initializing database...
-✅ Database initialized successfully!
-✅ Volunteer application system tables created!
-🚀 Server running on port 9000
-📍 API Base URL: http://localhost:9000
-👥 Volunteer system: http://localhost:9000/api/volunteer
-
-
-⚠️ IMPORTANT NOTES:
-
-1. First time running:
-   - Creates all tables
-   - Takes 2-3 seconds
-
-2. Subsequent runs:
-   - Checks if tables exist
-   - Adds only missing columns
-   - Takes < 1 second
-
-3. If you need to reset:
-   - Go to Neon dashboard
-   - Delete specific tables
-   - Restart server
-   - Tables recreate automatically
-
-4. Best practice:
-   - Never manually edit database in production
-   - Always update server.js
-   - Let code manage database structure
-*/

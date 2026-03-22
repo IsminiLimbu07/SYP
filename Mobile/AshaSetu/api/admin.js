@@ -1,5 +1,5 @@
 // Mobile/AshaSetu/api/admin.js
-import { apiConfig, makeRequest } from '../config/api'; // ✅ FIXED: added makeRequest import
+import { apiConfig, makeRequest } from '../config/api';
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
@@ -111,55 +111,76 @@ export const deleteNotification = async (token, notificationId) => {
 
 // ─── Volunteer Management ─────────────────────────────────────────────────────
 
-// Get pending volunteer applications
 export const getPendingVolunteerApplications = async (token) => {
   return makeRequest(apiConfig.ENDPOINTS.ADMIN.VOLUNTEERS_PENDING, {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
 };
 
-// Get all approved volunteers
 export const getAllVolunteers = async (token) => {
   return makeRequest(apiConfig.ENDPOINTS.ADMIN.VOLUNTEERS_ALL, {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
 };
 
-// Approve volunteer
 export const approveVolunteer = async (token, userId, adminNotes = '') => {
   return makeRequest(apiConfig.ENDPOINTS.ADMIN.VOLUNTEER_APPROVE(userId), {
     method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ admin_notes: adminNotes }),
   });
 };
 
-// Reject volunteer
 export const rejectVolunteer = async (token, userId, rejectionReason, adminNotes = '') => {
   return makeRequest(apiConfig.ENDPOINTS.ADMIN.VOLUNTEER_REJECT(userId), {
     method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ rejection_reason: rejectionReason, admin_notes: adminNotes }),
   });
 };
 
-// Revoke volunteer status
 export const revokeVolunteerStatus = async (token, userId, reason = '') => {
   return makeRequest(apiConfig.ENDPOINTS.ADMIN.VOLUNTEER_REVOKE(userId), {
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ reason }),
+  });
+};
+
+// ─── Campaign Management ──────────────────────────────────────────────────────
+
+// Get pending campaigns awaiting admin review
+export const getPendingCampaigns = async (token) => {
+  return makeRequest(apiConfig.ENDPOINTS.ADMIN.CAMPAIGNS_PENDING, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+
+// Get all campaigns (all statuses) for admin overview
+export const getAllCampaignsAdmin = async (token) => {
+  return makeRequest(apiConfig.ENDPOINTS.ADMIN.CAMPAIGNS_ALL, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+
+// Approve a campaign — makes it live
+export const approveCampaign = async (token, campaignId, adminNotes = '') => {
+  return makeRequest(apiConfig.ENDPOINTS.ADMIN.CAMPAIGN_APPROVE(campaignId), {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ admin_notes: adminNotes }),
+  });
+};
+
+// Reject a campaign — requires a reason
+export const rejectCampaign = async (token, campaignId, rejectionReason, adminNotes = '') => {
+  return makeRequest(apiConfig.ENDPOINTS.ADMIN.CAMPAIGN_REJECT(campaignId), {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ rejection_reason: rejectionReason, admin_notes: adminNotes }),
   });
 };

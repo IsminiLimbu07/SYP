@@ -164,7 +164,26 @@ const AdminDashboard = ({ navigation }) => {
         </View>
       </View>
 
-      
+      {/* Campaign Management Card */}
+      <TouchableOpacity
+        style={styles.managementCard}
+        onPress={() => navigation.navigate('ManageCampaigns')}
+        activeOpacity={0.8}
+      >
+        <View style={styles.managementCardHeader}>
+          <View style={styles.managementCardIcon}>
+            <Ionicons name="heart" size={24} color="#8B0000" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.managementCardTitle}>Campaign Management</Text>
+            <Text style={styles.managementCardSubtitle}>
+              Review and approve fundraising campaigns
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </View>
+      </TouchableOpacity>
+
       {/* Volunteer Management Card */}
       <TouchableOpacity
         style={styles.managementCard}
@@ -224,12 +243,7 @@ const AdminDashboard = ({ navigation }) => {
       )}
 
       {/* ── User Detail Modal ── */}
-      <Modal
-        animationType="slide"
-        transparent
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -416,42 +430,41 @@ const styles = StyleSheet.create({
   modalBtnClose:  { backgroundColor: '#888' },
   modalBtnText:   { color: '#fff', fontSize: 16, fontWeight: '600' },
 
-  
-managementCard: {
-  backgroundColor: '#fff',
-  marginHorizontal: 12,
-  marginBottom: 12,
-  borderRadius: 12,
-  elevation: 2,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.05,
-  shadowRadius: 2,
-},
-managementCardHeader: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  padding: 16,
-  gap: 12,
-},
-managementCardIcon: {
-  width: 48,
-  height: 48,
-  borderRadius: 24,
-  backgroundColor: '#fff5f5',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-managementCardTitle: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#333',
-  marginBottom: 2,
-},
-managementCardSubtitle: {
-  fontSize: 13,
-  color: '#666',
-},
+  managementCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 12,
+    marginBottom: 12,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  managementCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+  },
+  managementCardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#fff5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  managementCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  managementCardSubtitle: {
+    fontSize: 13,
+    color: '#666',
+  },
 
 });
 

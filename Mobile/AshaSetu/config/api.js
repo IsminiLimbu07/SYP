@@ -48,18 +48,17 @@ export const apiConfig = {
       SEND:     `${API_BASE_URL}/chat/send`,
     },
 
-        VOLUNTEER: {
-      APPLY: `${API_BASE_URL}/volunteer/apply`,
+    VOLUNTEER: {
+      APPLY:     `${API_BASE_URL}/volunteer/apply`,
       MY_STATUS: `${API_BASE_URL}/volunteer/my-status`,
-      CANCEL: `${API_BASE_URL}/volunteer/cancel-application`,
+      CANCEL:    `${API_BASE_URL}/volunteer/cancel-application`,
     },
 
-
-
     CAMPAIGNS: {
-      ALL:    `${API_BASE_URL}/campaigns`,
-      DONATE: `${API_BASE_URL}/campaigns/donate`,
-      MINE:   `${API_BASE_URL}/campaigns/my-campaigns`,
+      ALL:         `${API_BASE_URL}/campaigns`,
+      DONATE:      `${API_BASE_URL}/campaigns/donate`,
+      MINE:        `${API_BASE_URL}/campaigns/my-campaigns`,
+      DETAIL:      (id) => `${API_BASE_URL}/campaigns/${id}`,
     },
 
     NOTIFICATIONS: {
@@ -68,16 +67,24 @@ export const apiConfig = {
     },
 
     ADMIN: {
+      // Users
       USERS:       `${API_BASE_URL}/admin/users`,
       USER:        (id) => `${API_BASE_URL}/admin/users/${id}`,
       USER_STATUS: (id) => `${API_BASE_URL}/admin/users/${id}/status`,
       USER_ROLE:   (id) => `${API_BASE_URL}/admin/users/${id}/role`,
-      // NEW: Volunteer management endpoints
+
+      // Volunteers
       VOLUNTEERS_PENDING: `${API_BASE_URL}/admin/volunteers/pending`,
-      VOLUNTEERS_ALL: `${API_BASE_URL}/admin/volunteers/all`,
-      VOLUNTEER_APPROVE: (userId) => `${API_BASE_URL}/admin/volunteers/${userId}/approve`,
-      VOLUNTEER_REJECT: (userId) => `${API_BASE_URL}/admin/volunteers/${userId}/reject`,
-      VOLUNTEER_REVOKE: (userId) => `${API_BASE_URL}/admin/volunteers/${userId}/revoke`,
+      VOLUNTEERS_ALL:     `${API_BASE_URL}/admin/volunteers/all`,
+      VOLUNTEER_APPROVE:  (userId) => `${API_BASE_URL}/admin/volunteers/${userId}/approve`,
+      VOLUNTEER_REJECT:   (userId) => `${API_BASE_URL}/admin/volunteers/${userId}/reject`,
+      VOLUNTEER_REVOKE:   (userId) => `${API_BASE_URL}/admin/volunteers/${userId}/revoke`,
+
+      // Campaigns  ← NEW
+      CAMPAIGNS_PENDING: `${API_BASE_URL}/campaigns/admin/pending`,
+      CAMPAIGNS_ALL:     `${API_BASE_URL}/campaigns/admin/all`,
+      CAMPAIGN_APPROVE:  (id) => `${API_BASE_URL}/campaigns/admin/${id}/approve`,
+      CAMPAIGN_REJECT:   (id) => `${API_BASE_URL}/campaigns/admin/${id}/reject`,
     },
 
     UPLOAD: {

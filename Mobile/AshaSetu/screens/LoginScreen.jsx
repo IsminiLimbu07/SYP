@@ -5,6 +5,7 @@ import {
   Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
   Image, ScrollView, Dimensions, StatusBar,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { loginUser } from '../api/auth';
 
@@ -69,6 +70,7 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
               <View style={styles.inputWrapper}>
+                <Ionicons name="mail-outline" size={18} color="rgba(255,255,255,0.7)" style={styles.iconStyle} />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your email"
@@ -80,7 +82,6 @@ const LoginScreen = ({ navigation }) => {
                   autoComplete="email"
                   autoCorrect={false}
                 />
-                <Text style={styles.inputIcon}>✉</Text>
               </View>
             </View>
 
@@ -88,6 +89,7 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password</Text>
               <View style={styles.inputWrapper}>
+                <Ionicons name="lock-closed-outline" size={18} color="rgba(255,255,255,0.7)" style={styles.iconStyle} />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your password"
@@ -103,7 +105,11 @@ const LoginScreen = ({ navigation }) => {
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeButton}
                 >
-                  <Text style={styles.inputIcon}>{showPassword ? '👁' : '🔒'}</Text>
+                  <Ionicons 
+                    name={showPassword ? 'eye-outline' : 'eye-off-outline'} 
+                    size={18} 
+                    color="rgba(255,255,255,0.7)" 
+                  />
                 </TouchableOpacity>
               </View>
             </View>
@@ -159,9 +165,9 @@ const styles = StyleSheet.create({
   inputGroup:          { marginBottom: 18 },
   label:               { fontSize: 13, color: '#fff', marginBottom: 8, fontWeight: '500' },
   inputWrapper:        { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 8, paddingHorizontal: 12 },
+  iconStyle:           { marginRight: 10 },
   input:               { flex: 1, paddingVertical: 12, fontSize: 14, color: '#fff' },
-  inputIcon:           { fontSize: 18, color: 'rgba(255,255,255,0.6)', marginLeft: 8 },
-  eyeButton:           { padding: 5 },
+  eyeButton:           { padding: 8, marginLeft: 8 },
   forgotPassword:      { alignSelf: 'flex-end', marginTop: 5, marginBottom: 20 },
   forgotPasswordText:  { color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '500' },
   loginButton:         { backgroundColor: 'rgba(0,0,0,0.3)', paddingVertical: 14, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 5 },
