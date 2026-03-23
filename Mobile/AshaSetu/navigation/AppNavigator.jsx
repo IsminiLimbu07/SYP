@@ -18,7 +18,7 @@ import EditProfileScreen        from '../screens/EditProfileScreen';
 import ChangePasswordScreen     from '../screens/ChangePasswordScreen';
 import FindDonorsScreen         from '../screens/FindDonorScreen';
 import BloodRequestScreen       from '../screens/BloodRequestScreen';
-import BloodRequestsFeedScreen  from '../screens/BloodRequestsFeedScreen';
+import BloodRequestsFeedScreen  from '../screens/BloodRequestFeedScreen';
 import AmbulanceScreen          from '../screens/AmbulanceScreen';
 import FirstAidScreen           from '../screens/FirstAidScreen';
 import DonationScreen           from '../screens/DonationScreen';
@@ -116,10 +116,26 @@ const AppNavigator = () => {
           <Stack.Screen name="ChangePassword"component={ChangePasswordScreen}options={{ title: 'Change Password',  ...darkRedHeader }} />
           <Stack.Screen name="VerifyEmail"   component={VerifyEmailScreen}   options={{ title: 'Verify Email',     ...darkRedHeader }} />
 
-          {/* ── Blood ── */}
-          <Stack.Screen name="FindDonor"          component={FindDonorsScreen}        options={{ title: 'Find Donors',    ...darkRedHeader }} />
-          <Stack.Screen name="BloodRequest"       component={BloodRequestScreen}      options={{ title: 'Blood Request',  ...darkRedHeader }} />
-          <Stack.Screen name="BloodRequestsFeed"  component={BloodRequestsFeedScreen} options={{ title: 'Blood Requests', ...darkRedHeader }} />
+          {/* ── Blood (DEADLINE-BASED SYSTEM) ── */}
+          {/* ⚠️ IMPORTANT: Screen names must match navigation.navigate() calls */}
+          <Stack.Screen 
+            name="BloodRequest"              // ← Screen name (used in navigation.navigate)
+            component={BloodRequestScreen}   // ← Component to render
+            options={{ title: 'Create Blood Request', ...darkRedHeader }} 
+          />
+          
+          <Stack.Screen 
+            name="BloodRequestList"
+            component={BloodRequestsFeedScreen}
+            options={{ title: 'Blood Requests', ...darkRedHeader }} 
+          />
+          
+          <Stack.Screen 
+            name="FindDonor"                 // ← Screen name (used in navigation.navigate)
+            component={FindDonorsScreen}    
+            options={{ title: 'Find Donors', ...darkRedHeader }} 
+          />
+          
           <Stack.Screen name="RespondToRequest"   component={RespondToRequestScreen}  options={{ headerShown: false }} />
           <Stack.Screen name="ManageResponses"    component={ManageResponseScreen}    options={{ headerShown: false }} />
           <Stack.Screen name="MyDonationResponses"component={MyDonationResponseScreen}options={{ headerShown: false }} />

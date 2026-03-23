@@ -9,8 +9,8 @@ import {
   Alert,
   Linking,
   ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { apiConfig } from '../config/api';
@@ -222,7 +222,7 @@ export default function MyDonationResponsesScreen({ navigation }) {
             {filter === 'all' && (
               <TouchableOpacity
                 style={styles.browseBtn}
-                onPress={() => navigation.navigate('BloodRequestsFeed')}
+                onPress={() => navigation.navigate('BloodRequestList')}
               >
                 <Text style={styles.browseBtnText}>Browse Requests</Text>
               </TouchableOpacity>

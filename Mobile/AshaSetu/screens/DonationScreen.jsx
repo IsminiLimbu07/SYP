@@ -55,13 +55,39 @@ export default function DonationScreen({ navigation }) {
 
   const fetchCampaigns = async () => {
     try {
-      const response = await fetch(`${apiConfig.BASE_URL}/campaigns`, {
-        headers: { Authorization: `Bearer ${token}` },
+      console.log('[Donation] Fetching campaigns from:', `${apiConfig.BASE_URL}/community/campaigns`);
+      console.log('[Donation] Token available:', !!token);
+
+      const response = await fetch(`${apiConfig.BASE_URL}/community/campaigns`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
+
+      console.log('[Donation] API Response Status:', response.status, response.statusText);
+
+      // Check if response is OK (status 200-299)
+      if (!response.ok) {
+        throw new Error(
+          `API Error: ${response.status} ${response.statusText}. Check your backend route is correct.`
+        );
+      }
+
       const data = await response.json();
-      if (data.success) setCampaigns(data.data || []);
+      console.log('[Donation] API Response Data:', data);
+      console.log('[Donation] Number of campaigns:', data.data?.length || 0);
+
+      if (data.success && Array.isArray(data.data)) {
+        setCampaigns(data.data);
+        console.log('[Donation] ✅ Successfully loaded', data.data.length, 'campaigns');
+      } else {
+        console.warn('[Donation] ⚠️ API returned success:false or no data array', data);
+        setCampaigns([]);
+      }
     } catch (e) {
-      console.error('[Donation] Error fetching campaigns:', e);
+      console.error('[Donation] ❌ Error fetching campaigns:', e.message);
+      setCampaigns([]);
     } finally {
       setLoading(false);
       setRefreshing(false);

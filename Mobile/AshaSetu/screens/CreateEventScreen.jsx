@@ -10,11 +10,14 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker from "@react-native-community/datetimepicker"
+
 import { AuthContext } from '../context/AuthContext';
 import { apiConfig } from '../config/api';
 
@@ -215,88 +218,90 @@ export default function CreateEventScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          {/* Event Image */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Event Photo (Optional)</Text>
-            <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-              {imageUri ? (
-                <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-              ) : (
-                <View style={styles.imagePlaceholder}>
-                  <MaterialCommunityIcons name="camera-plus" size={48} color="#CCC" />
-                  <Text style={styles.imagePlaceholderText}>Tap to add photo</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            {imageUri && (
-              <TouchableOpacity
-                style={styles.removeImageBtn}
-                onPress={() => setImageUri(null)}
-              >
-                <Text style={styles.removeImageText}>Remove Photo</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scrollViewContent}
+        >
+          <View style={styles.content}>
+            {/* Event Image */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Event Photo (Optional)</Text>
+              <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+                {imageUri ? (
+                  <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <MaterialCommunityIcons name="camera-plus" size={48} color="#CCC" />
+                    <Text style={styles.imagePlaceholderText}>Tap to add photo</Text>
+                  </View>
+                )}
               </TouchableOpacity>
-            )}
-          </View>
+              {imageUri && (
+                <TouchableOpacity
+                  style={styles.removeImageBtn}
+                  onPress={() => setImageUri(null)}
+                >
+                  <Text style={styles.removeImageText}>Remove Photo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
-          {/* Title */}
-          <View style={styles.section}>
-            <Text style={styles.label}>
-              Event Title <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., Blood Donation Camp - Kathmandu"
-              placeholderTextColor="#999"
-              value={title}
-              onChangeText={setTitle}
-              maxLength={100}
-            />
-          </View>
-
-          {/* Description */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Description</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Tell people about this event..."
-              placeholderTextColor="#999"
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={4}
-              maxLength={500}
-            />
-            <Text style={styles.charCount}>{description.length}/500</Text>
-          </View>
-
-          {/* Date */}
-          <View style={styles.section}>
-            <Text style={styles.label}>
-              Event Date <Text style={styles.required}>*</Text>
-            </Text>
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Ionicons name="calendar-outline" size={20} color="#8B0000" />
-              <Text style={styles.dateButtonText}>
-                {eventDate.toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+            {/* Title */}
+            <View style={styles.section}>
+              <Text style={styles.label}>
+                Event Title <Text style={styles.required}>*</Text>
               </Text>
-            </TouchableOpacity>
-          </View>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Blood Donation Camp - Kathmandu"
+                placeholderTextColor="#999"
+                value={title}
+                onChangeText={setTitle}
+                maxLength={100}
+              />
+            </View>
 
-          {/* Time */}
-          <View style={styles.row}>
-            <View style={[styles.section, styles.halfWidth]}>
+            {/* Description */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Description</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Tell people about this event..."
+                placeholderTextColor="#999"
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={4}
+                maxLength={500}
+              />
+              <Text style={styles.charCount}>{description.length}/500</Text>
+            </View>
+
+            {/* Date */}
+            <View style={styles.section}>
+              <Text style={styles.label}>
+                Event Date <Text style={styles.required}>*</Text>
+              </Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <MaterialCommunityIcons name="calendar" size={20} color="#666" />
+                <Text style={styles.dateButtonText}>
+                  {eventDate.toLocaleDateString()}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Start and End Time */}
+            <View style={styles.section}>
               <Text style={styles.label}>
                 Start Time <Text style={styles.required}>*</Text>
               </Text>
@@ -304,9 +309,9 @@ export default function CreateEventScreen({ navigation }) {
                 style={styles.dateButton}
                 onPress={() => setShowStartTimePicker(true)}
               >
-                <Ionicons name="time-outline" size={20} color="#8B0000" />
+                <MaterialCommunityIcons name="clock" size={20} color="#666" />
                 <Text style={styles.dateButtonText}>
-                  {startTime.toLocaleTimeString('en-US', {
+                  {startTime.toLocaleTimeString([], {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}
@@ -314,7 +319,7 @@ export default function CreateEventScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.section, styles.halfWidth]}>
+            <View style={styles.section}>
               <Text style={styles.label}>
                 End Time <Text style={styles.required}>*</Text>
               </Text>
@@ -322,107 +327,107 @@ export default function CreateEventScreen({ navigation }) {
                 style={styles.dateButton}
                 onPress={() => setShowEndTimePicker(true)}
               >
-                <Ionicons name="time-outline" size={20} color="#8B0000" />
+                <MaterialCommunityIcons name="clock" size={20} color="#666" />
                 <Text style={styles.dateButtonText}>
-                  {endTime.toLocaleTimeString('en-US', {
+                  {endTime.toLocaleTimeString([], {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Location */}
+            <View style={styles.section}>
+              <Text style={styles.label}>
+                Location <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., TU Teaching Hospital"
+                placeholderTextColor="#999"
+                value={location}
+                onChangeText={setLocation}
+                maxLength={100}
+              />
+            </View>
+
+            {/* City */}
+            <View style={styles.section}>
+              <Text style={styles.label}>
+                City <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Kathmandu"
+                placeholderTextColor="#999"
+                value={city}
+                onChangeText={setCity}
+                maxLength={50}
+              />
+            </View>
+
+            {/* Address */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Full Address (Optional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Maharajgunj, Kathmandu"
+                placeholderTextColor="#999"
+                value={address}
+                onChangeText={setAddress}
+                maxLength={200}
+              />
+            </View>
+
+            {/* Contact Number */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Contact Number (Optional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., 9841234567"
+                placeholderTextColor="#999"
+                value={contactNumber}
+                onChangeText={setContactNumber}
+                keyboardType="phone-pad"
+                maxLength={15}
+              />
+            </View>
+
+            {/* Max Participants */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Max Participants (Optional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., 100"
+                placeholderTextColor="#999"
+                value={maxParticipants}
+                onChangeText={setMaxParticipants}
+                keyboardType="number-pad"
+                maxLength={4}
+              />
+            </View>
+
+            {/* Create Button */}
+            <TouchableOpacity
+              style={[styles.createButton, loading && styles.createButtonDisabled]}
+              onPress={handleCreateEvent}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <MaterialCommunityIcons name="calendar-heart" size={24} color="#fff" />
+                  <Text style={styles.createButtonText}>Create Event</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.bottomSpacing} />
           </View>
-
-          {/* Location */}
-          <View style={styles.section}>
-            <Text style={styles.label}>
-              Location <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., TU Teaching Hospital"
-              placeholderTextColor="#999"
-              value={location}
-              onChangeText={setLocation}
-              maxLength={100}
-            />
-          </View>
-
-          {/* City */}
-          <View style={styles.section}>
-            <Text style={styles.label}>
-              City <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., Kathmandu"
-              placeholderTextColor="#999"
-              value={city}
-              onChangeText={setCity}
-              maxLength={50}
-            />
-          </View>
-
-          {/* Address */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Full Address (Optional)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., Maharajgunj, Kathmandu"
-              placeholderTextColor="#999"
-              value={address}
-              onChangeText={setAddress}
-              maxLength={200}
-            />
-          </View>
-
-          {/* Contact Number */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Contact Number (Optional)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., 9841234567"
-              placeholderTextColor="#999"
-              value={contactNumber}
-              onChangeText={setContactNumber}
-              keyboardType="phone-pad"
-              maxLength={15}
-            />
-          </View>
-
-          {/* Max Participants */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Max Participants (Optional)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., 100"
-              placeholderTextColor="#999"
-              value={maxParticipants}
-              onChangeText={setMaxParticipants}
-              keyboardType="number-pad"
-              maxLength={4}
-            />
-          </View>
-
-          {/* Create Button */}
-          <TouchableOpacity
-            style={[styles.createButton, loading && styles.createButtonDisabled]}
-            onPress={handleCreateEvent}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <MaterialCommunityIcons name="calendar-heart" size={24} color="#fff" />
-                <Text style={styles.createButtonText}>Create Event</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.bottomSpacing} />
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Date Picker */}
       {showDatePicker && (
@@ -478,21 +483,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-  header: {
-    backgroundColor: '#8B0000',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
+  keyboardAvoidingView: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
   },
   content: {
     padding: 16,
@@ -584,13 +582,6 @@ const styles = StyleSheet.create({
   dateButtonText: {
     fontSize: 15,
     color: '#333',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  halfWidth: {
-    flex: 1,
   },
   createButton: {
     flexDirection: 'row',

@@ -14,19 +14,36 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { apiConfig } from '../config/api';
 
+/**
+ * Merged BloodRequestsFeedScreen
+ * Combines old BloodRequestsFeedScreen and serves as the main request listing
+ * - Shows all active requests (not expired)
+ * - Displays countdown to expiry
+ * - Shows urgency with color coding
+ */
 export default function BloodRequestsFeedScreen({ navigation }) {
   const { token, user } = useContext(AuthContext);
-  const [requests, setRequests] = useState([]);
+  const [allRequests, setAllRequests] = useState([]);   // always holds full unfiltered list
+  const [requests, setRequests] = useState([]);          // filtered view
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState('all'); // all, critical, urgent, normal
+  const [filter, setFilter] = useState('all'); // all, critical, urgent, moderate
+
+  // Re-apply filter whenever the filter value or the full list changes
+  useEffect(() => {
+    if (filter === 'all') {
+      setRequests(allRequests);
+    } else {
+      setRequests(allRequests.filter(r => r.urgency_level === filter));
+    }
+  }, [filter, allRequests]);
 
   useEffect(() => {
     if (!token) return;
     loadBloodRequests();
-  }, [filter, token]);
+  }, [token]);
 
-  // Reload when screen gains focus so newly created requests appear
+  // Reload when screen gains focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       if (token) loadBloodRequests();
@@ -37,8 +54,9 @@ export default function BloodRequestsFeedScreen({ navigation }) {
   const loadBloodRequests = async () => {
     try {
       setLoading(true);
-      const params = filter && filter !== 'all' ? `?urgency_level=${encodeURIComponent(filter)}` : '';
-      const url = `${apiConfig.BASE_URL}/blood/requests${params}`;
+      // Always fetch all requests — filtering is done client-side
+      const url = `${apiConfig.BASE_URL}/blood/requests`;
+      
       const resp = await fetch(url, {
         method: 'GET',
         headers: {
@@ -47,16 +65,17 @@ export default function BloodRequestsFeedScreen({ navigation }) {
         },
       });
       const json = await resp.json();
+      
       if (resp.ok && json.success) {
-        setRequests(json.data || []);
+        setAllRequests(json.data || []);
       } else {
-        console.warn('Failed to load blood requests from API:', json?.message || resp.status);
-        setRequests([]);
+        console.warn('Failed to load blood requests:', json?.message || resp.status);
+        setAllRequests([]);
       }
     } catch (error) {
       console.error('Error loading blood requests:', error);
       Alert.alert('Error', 'Failed to load blood requests');
-      setRequests([]);
+      setAllRequests([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -75,11 +94,11 @@ export default function BloodRequestsFeedScreen({ navigation }) {
   const getUrgencyColor = (urgency) => {
     switch (urgency) {
       case 'critical':
-        return '#b90707';
+        return '#8B0000';
       case 'urgent':
-        return '#b76e00';
-      case 'normal':
-        return '#2E7D32';
+        return '#9b5101';
+      case 'moderate':
+        return '#015604';
       default:
         return '#999';
     }
@@ -91,23 +110,39 @@ export default function BloodRequestsFeedScreen({ navigation }) {
         return 'alert-circle';
       case 'urgent':
         return 'warning';
-      case 'normal':
+      case 'moderate':
         return 'information-circle';
       default:
         return 'information-circle';
     }
   };
 
-  const getDaysUntilNeeded = (dateString) => {
-    const today = new Date();
-    const neededDate = new Date(dateString);
-    const diffTime = neededDate - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 0) return 'Overdue';
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Tomorrow';
-    return `${diffDays} days`;
+  /**
+   * Format time remaining for display
+   */
+  const formatTimeRemaining = (deadline) => {
+    const now = new Date();
+    const deadlineDate = new Date(deadline);
+    const diffMs = deadlineDate - now;
+
+    if (diffMs <= 0) {
+      return { text: 'Expired', color: '#999' };
+    }
+
+    const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
+
+    if (diffHours < 24) {
+      return { 
+        text: `${diffHours}h left`, 
+        color: diffHours <= 6 ? '#FF1744' : '#FF9800' 
+      };
+    }
+
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    return { 
+      text: `${diffDays}d left`, 
+      color: '#dbdbdb' 
+    };
   };
 
   const FilterButton = ({ label, value }) => (
@@ -132,25 +167,23 @@ export default function BloodRequestsFeedScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-
       {/* Filter Buttons */}
       <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <FilterButton label="All Requests" value="all" />
-          <FilterButton label="Critical" value="critical" />
-          <FilterButton label="Urgent" value="urgent" />
-          <FilterButton label="Normal" value="normal" />
+          <FilterButton label="🔴 Critical" value="critical" />
+          <FilterButton label="🟠 Urgent" value="urgent" />
+          <FilterButton label="🟡 Moderate" value="moderate" />
         </ScrollView>
       </View>
 
-      {/* Create Request Button */}
+      {/* Create New Request Button */}
       <TouchableOpacity
         style={styles.createRequestBtn}
         onPress={() => navigation.navigate('BloodRequest')}
       >
         <Ionicons name="add-circle" size={20} color="#fff" />
-        <Text style={styles.createRequestText}>Create Blood Request</Text>
+        <Text style={styles.createRequestText}>+ Create New Request</Text>
       </TouchableOpacity>
 
       {/* Requests List */}
@@ -164,19 +197,23 @@ export default function BloodRequestsFeedScreen({ navigation }) {
       >
         {requests.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="emoticon-sad-outline" size={64} color="#CCC" />
-            <Text style={styles.emptyText}>No blood requests found</Text>
-            <Text style={styles.emptySubtext}>Check back later or create a new request</Text>
+            <MaterialCommunityIcons name="emoticon-happy-outline" size={64} color="#CCC" />
+            <Text style={styles.emptyText}>No active requests</Text>
+            <Text style={styles.emptySubtext}>
+              {filter === 'all' 
+                ? 'Check back later or create a new request' 
+                : 'No requests with this urgency level'}
+            </Text>
           </View>
         ) : (
           requests.map((request) => {
             const urgencyColor = getUrgencyColor(request.urgency_level);
             const urgencyIcon = getUrgencyIcon(request.urgency_level);
-            const daysLeft = getDaysUntilNeeded(request.needed_by_date);
+            const timeRemaining = formatTimeRemaining(request.deadline);
 
             return (
               <View key={request.request_id} style={styles.requestCard}>
-                {/* Urgency Banner */}
+                {/* Top Banner: Urgency + Time Remaining */}
                 <View style={[styles.urgencyBanner, { backgroundColor: urgencyColor }]}>
                   <Ionicons name={urgencyIcon} size={16} color="#fff" />
                   <Text style={styles.urgencyText}>
@@ -184,7 +221,9 @@ export default function BloodRequestsFeedScreen({ navigation }) {
                   </Text>
                   <View style={styles.urgencyDivider} />
                   <Ionicons name="time" size={16} color="#fff" />
-                  <Text style={styles.urgencyText}>{daysLeft}</Text>
+                  <Text style={[styles.urgencyText, { color: timeRemaining.color }]}>
+                    {timeRemaining.text}
+                  </Text>
                 </View>
 
                 {/* Blood Type Badge */}
@@ -193,7 +232,7 @@ export default function BloodRequestsFeedScreen({ navigation }) {
                   <Text style={styles.unitsText}>{request.units_needed} pint(s)</Text>
                 </View>
 
-                {/* Patient Info */}
+                {/* Patient & Hospital Info */}
                 <View style={styles.patientSection}>
                   <View style={styles.patientRow}>
                     <MaterialCommunityIcons name="account" size={20} color="#666" />
@@ -211,7 +250,7 @@ export default function BloodRequestsFeedScreen({ navigation }) {
                   <View style={styles.dateRow}>
                     <Ionicons name="calendar" size={18} color="#666" />
                     <Text style={styles.dateText}>
-                      Needed by: {new Date(request.needed_by_date).toLocaleDateString()}
+                      Deadline: {new Date(request.deadline).toLocaleDateString()} {new Date(request.deadline).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </Text>
                   </View>
                 </View>
@@ -244,7 +283,7 @@ export default function BloodRequestsFeedScreen({ navigation }) {
                 {/* Action Buttons */}
                 <View style={styles.actionRow}>
                   {request.requester_id === user?.user_id ? (
-                    // Show Manage Responses button for requester
+                    // Owner view: Manage Responses
                     <TouchableOpacity
                       style={[styles.respondBtn, { flex: 1 }]}
                       onPress={() =>
@@ -253,16 +292,19 @@ export default function BloodRequestsFeedScreen({ navigation }) {
                     >
                       <MaterialCommunityIcons name="account-group" size={20} color="#fff" />
                       <Text style={styles.respondBtnText}>
-                        Manage Responses ({request.total_responses})
+                        View {request.total_responses} Response{request.total_responses !== 1 ? 's' : ''}
                       </Text>
                     </TouchableOpacity>
                   ) : (
-                    // Show I Can Help button for donors
+                    // Donor view: I Can Help
                     <>
                       <TouchableOpacity
                         style={styles.detailsBtn}
                         onPress={() =>
-                          Alert.alert('Not implemented', 'Request details view is not implemented yet.')
+                          Alert.alert(
+                            'Request Details',
+                            `Patient: ${request.patient_name}\nBlood Group: ${request.blood_group}\nUnits: ${request.units_needed}\nUrgency: ${request.urgency_level}\nHospital: ${request.hospital_name}\nContact: ${request.hospital_contact}`
+                          )
                         }
                       >
                         <Ionicons name="information-circle-outline" size={20} color="#8B0000" />
@@ -280,10 +322,17 @@ export default function BloodRequestsFeedScreen({ navigation }) {
                   )}
                 </View>
 
-                {/* Requester Contact */}
+                {/* Requester Info */}
                 <View style={styles.requesterSection}>
                   <Text style={styles.requesterLabel}>Posted by:</Text>
                   <Text style={styles.requesterName}>{request.requester_name}</Text>
+                  <TouchableOpacity
+                    onPress={() =>
+                      Alert.alert('Contact', `Phone: ${request.requester_phone}`)
+                    }
+                  >
+                    <Text style={styles.requesterPhone}>{request.requester_phone}</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             );
@@ -312,19 +361,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  header: {
-    backgroundColor: '#8B0000',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
-  },
   filterContainer: {
     backgroundColor: '#fff',
     paddingVertical: 12,
@@ -333,7 +369,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E0E0E0',
   },
   filterBtn: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#F0F0F0',
@@ -343,7 +379,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#8B0000',
   },
   filterBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     color: '#666',
   },
@@ -363,7 +399,7 @@ const styles = StyleSheet.create({
   },
   createRequestText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   scrollView: {
@@ -387,6 +423,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#BBB',
     marginTop: 8,
+    textAlign: 'center',
   },
   requestCard: {
     backgroundColor: '#fff',
@@ -408,7 +445,7 @@ const styles = StyleSheet.create({
   },
   urgencyText: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
     letterSpacing: 0.5,
   },
@@ -483,9 +520,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dateText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
     marginLeft: 8,
+    fontWeight: '500',
   },
   descriptionContainer: {
     paddingHorizontal: 16,
@@ -558,7 +596,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   requesterLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#999',
   },
   requesterName: {
@@ -566,6 +604,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#333',
     flex: 1,
+  },
+  requesterPhone: {
+    fontSize: 13,
+    color: '#8B0000',
+    fontWeight: '500',
   },
   bottomSpacing: {
     height: 20,

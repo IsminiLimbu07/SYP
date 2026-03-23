@@ -12,6 +12,8 @@ import {
   Modal,
   FlatList,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -168,13 +170,17 @@ export default function CreateCampaignScreen({ navigation }) {
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <StatusBar barStyle="light-content" backgroundColor="#8B0000" />
 
       <ScrollView
-        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        bounces={false}
       >
         {/* ── Info banner ── */}
         <View style={styles.infoBanner}>
@@ -379,14 +385,13 @@ export default function CreateCampaignScreen({ navigation }) {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-    </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container:     { flex: 1, backgroundColor: '#f5f5f5' },
-  scroll:        { flex: 1 },
-  scrollContent: { padding: 16 },
+  scrollContent: { flexGrow: 1, padding: 16 },
 
   infoBanner: {
     backgroundColor: '#FFF9E5',

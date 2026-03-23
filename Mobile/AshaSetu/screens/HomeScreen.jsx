@@ -6,17 +6,19 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Image,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import { AuthContext } from '../context/AuthContext';
 import { apiConfig } from '../config/api';
 import { Animated } from 'react-native';
 
 const HomeScreen = ({ navigation }) => {
   const { user, token } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
   const [bloodRequests, setBloodRequests] = useState([]);
   const [loading, setLoading]             = useState(true);
   const [nearbyEvents, setNearbyEvents]   = useState([]);
@@ -230,16 +232,17 @@ const HomeScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+    <View style={styles.container}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: insets.bottom + 20 }} showsVerticalScrollIndicator={false}>
         {/* ── Header ── */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <Text style={styles.greeting}>Welcome back,</Text>
-            <Text style={styles.userName}>
-              {user?.full_name?.split(' ')[0] || 'User'}! 👋
-            </Text>
-          </View>
+        <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+            <View style={styles.headerTop}>
+              <Text style={styles.greeting}>Welcome back,</Text>
+              <Text style={styles.userName}>
+                {user?.full_name?.split(' ')[0] || 'User'}! 👋
+              </Text>
+            </View>
 
           <View style={styles.headerActions}>
             {/* 🔔 Notification Bell */}
@@ -308,7 +311,7 @@ const HomeScreen = ({ navigation }) => {
               </View>
               <TouchableOpacity
                 style={styles.viewAllButtonCompact}
-                onPress={() => navigation.navigate('BloodRequestsFeed')}
+                onPress={() => navigation.navigate('BloodRequestList')}
               >
                 <Text style={styles.viewAllText}>View All</Text>
                 <MaterialCommunityIcons name="chevron-right" size={16} color="#fff" />
@@ -374,7 +377,7 @@ const HomeScreen = ({ navigation }) => {
             <Text style={styles.actionLabel}>Find Donors</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('BloodRequestsFeed')}>
+          <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('BloodRequestList')}>
             <View style={styles.actionIconContainer}>
               <MaterialCommunityIcons name="water-outline" size={24} color="#DC143C" />
             </View>
@@ -547,7 +550,7 @@ const HomeScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* ── Bottom Navigation Bar ── */}
-      <View style={styles.bottomNav}>
+      <View style={[styles.bottomNav, { paddingBottom: insets.bottom || 8 }]}>
         <TouchableOpacity style={styles.navItem}>
           <MaterialCommunityIcons name="home-outline" size={20} color="#8A8A8A" />
         </TouchableOpacity>
@@ -561,7 +564,7 @@ const HomeScreen = ({ navigation }) => {
           <MaterialCommunityIcons name="account-outline" size={20} color="#8A8A8A" />
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -577,7 +580,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 30,
+    paddingBottom: 30,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
     marginBottom: 20,

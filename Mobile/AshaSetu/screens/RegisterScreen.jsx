@@ -10,10 +10,10 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  SafeAreaView,
   Animated,
   Keyboard,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthContext } from '../context/AuthContext';
 import { registerUser } from '../api/auth';
 

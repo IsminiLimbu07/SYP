@@ -10,7 +10,7 @@ import donorRoutes from './routes/donorRoutes.js';
 import communityRoutes from './routes/communityRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import campaignRoutes from './routes/campaignRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js'; // ← NEW
+import paymentRoutes from './routes/paymentRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
@@ -26,7 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // ── Serve static files (images, uploads) ─────────────────────────────────────
 app.use('/uploads', express.static('uploads'));
-app.use(express.static('public')); // Optional: for other static files
+app.use(express.static('public'));
 
 const PORT = process.env.PORT || 9000;
 
@@ -48,6 +48,11 @@ async function initDB() {
         is_admin BOOLEAN DEFAULT false,
         is_verified BOOLEAN DEFAULT false,
         is_active BOOLEAN DEFAULT true,
+        verification_token VARCHAR(255),
+        verification_token_expires TIMESTAMP,
+        reset_otp VARCHAR(6),
+        reset_otp_expiry TIMESTAMP,
+        reset_otp_verified BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -80,7 +85,7 @@ async function initDB() {
       )
     `;
 
-    // Volunteer status columns (safe to run multiple times)
+    // Volunteer status columns
     await sql`
       ALTER TABLE user_profiles 
       ADD COLUMN IF NOT EXISTS volunteer_status VARCHAR(20) DEFAULT 'none' 
@@ -110,41 +115,61 @@ async function initDB() {
     await sql`CREATE INDEX IF NOT EXISTS idx_volunteer_applications_status ON volunteer_applications(status)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_volunteer_applications_user_id ON volunteer_applications(user_id)`;
 
-    // ── Table 4: Blood Requests ─────────────────────────────────────────────
+    // ── Table 4: Blood Requests (REDESIGNED - Deadline-based) ───────────────
+    // Schema v2.0: Explicit deadline model with automatic expiration
     await sql`
       CREATE TABLE IF NOT EXISTS blood_requests (
         request_id SERIAL PRIMARY KEY,
-        requester_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+        requester_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
         patient_name VARCHAR(255) NOT NULL,
         blood_group VARCHAR(5) NOT NULL,
-        units_needed INTEGER NOT NULL,
-        urgency_level VARCHAR(20) CHECK (urgency_level IN ('critical', 'urgent', 'moderate')),
-        hospital_name VARCHAR(255),
+        units_needed INTEGER NOT NULL CHECK (units_needed >= 1 AND units_needed <= 20),
+        urgency_level VARCHAR(20) NOT NULL 
+          CHECK (urgency_level IN ('critical', 'urgent', 'moderate')),
+        hospital_name VARCHAR(255) NOT NULL,
         hospital_address TEXT,
-        contact_number VARCHAR(20) NOT NULL,
-        additional_notes TEXT,
+        hospital_city VARCHAR(100) NOT NULL,
+        hospital_contact VARCHAR(20) NOT NULL,
+        description TEXT,
         location_lat DECIMAL(10, 8),
         location_lng DECIMAL(11, 8),
-        status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'fulfilled', 'cancelled')),
+        status VARCHAR(20) DEFAULT 'active' 
+          CHECK (status IN ('active', 'fulfilled', 'cancelled', 'expired')),
+        deadline TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         fulfilled_at TIMESTAMP
       )
     `;
 
-    // ── Table 5: Donation Responses ─────────────────────────────────────────
+    // Indexes for efficient querying
+    await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_status ON blood_requests(status)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_deadline ON blood_requests(deadline)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_requester ON blood_requests(requester_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_urgency ON blood_requests(urgency_level)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_blood_requests_active ON blood_requests(status, deadline) WHERE status = 'active'`;
+
+    // ── Table 5: Donation Responses ──────────────────────────────────────────
+    // Renamed from response_status to status for clarity
     await sql`
       CREATE TABLE IF NOT EXISTS donation_responses (
-        response_id SERIAL PRIMARY KEY,
-        request_id INTEGER REFERENCES blood_requests(request_id) ON DELETE CASCADE,
-        donor_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
-        response_status VARCHAR(20) DEFAULT 'pending' 
-          CHECK (response_status IN ('pending', 'accepted', 'completed', 'declined')),
+        donation_id SERIAL PRIMARY KEY,
+        request_id INTEGER NOT NULL REFERENCES blood_requests(request_id) ON DELETE CASCADE,
+        donor_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        status VARCHAR(20) DEFAULT 'pending' 
+          CHECK (status IN ('pending', 'confirmed', 'cancelled')),
         message TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(request_id, donor_id)
       )
     `;
 
-    // ── Table 6: Donation Events ────────────────────────────────────────────
+    await sql`CREATE INDEX IF NOT EXISTS idx_donation_responses_status ON donation_responses(status)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_donation_responses_request ON donation_responses(request_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_donation_responses_donor ON donation_responses(donor_id)`;
+
+    // ── Table 6: Donation Events ─────────────────────────────────────────────
     await sql`
       CREATE TABLE IF NOT EXISTS donation_events (
         event_id SERIAL PRIMARY KEY,
@@ -164,7 +189,7 @@ async function initDB() {
       )
     `;
 
-    // ── Table 7: Event Participants ─────────────────────────────────────────
+    // ── Table 7: Event Participants ──────────────────────────────────────────
     await sql`
       CREATE TABLE IF NOT EXISTS event_participants (
         participant_id SERIAL PRIMARY KEY,
@@ -177,7 +202,7 @@ async function initDB() {
       )
     `;
 
-    // ── Table 8: Event Ratings ──────────────────────────────────────────────
+    // ── Table 8: Event Ratings ───────────────────────────────────────────────
     await sql`
       CREATE TABLE IF NOT EXISTS event_ratings (
         rating_id SERIAL PRIMARY KEY,
@@ -190,7 +215,7 @@ async function initDB() {
       )
     `;
 
-    // ── Table 9: Chat Messages ──────────────────────────────────────────────
+    // ── Table 9: Chat Messages ───────────────────────────────────────────────
     await sql`
       CREATE TABLE IF NOT EXISTS chat_messages (
         message_id SERIAL PRIMARY KEY,
@@ -204,9 +229,7 @@ async function initDB() {
       )
     `;
 
-    // ── Table 10: Campaigns ─────────────────────────────────────────────────
-    // Single source of truth — replaces the old "fundraising_campaigns" table.
-    // status flow: pending → active (approved) or rejected
+    // ── Table 10: Campaigns ──────────────────────────────────────────────────
     await sql`
       CREATE TABLE IF NOT EXISTS campaigns (
         campaign_id SERIAL PRIMARY KEY,
@@ -231,30 +254,10 @@ async function initDB() {
       )
     `;
 
-    // Safe migration: add review columns if campaigns table already existed
-    await sql`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS reviewed_by INTEGER REFERENCES users(user_id)`;
-    await sql`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP`;
-    await sql`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS rejection_reason TEXT`;
-    await sql`ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS admin_notes TEXT`;
-
-    // Fix the constraint: Drop and recreate to ensure 'pending' is allowed
-    try {
-      await sql`ALTER TABLE campaigns DROP CONSTRAINT IF EXISTS campaigns_status_check CASCADE`;
-    } catch (e) {
-      // Constraint may not exist, that's ok
-    }
-
-    // Add the corrected constraint
-    await sql`
-      ALTER TABLE campaigns 
-      ADD CONSTRAINT campaigns_status_check 
-      CHECK (status IN ('pending', 'active', 'completed', 'rejected', 'cancelled'))
-    `;
-
     await sql`CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_campaigns_creator ON campaigns(creator_id)`;
 
-    // ── Table 11: Campaign Donations ────────────────────────────────────────
+    // ── Table 11: Campaign Donations ─────────────────────────────────────────
     await sql`
       CREATE TABLE IF NOT EXISTS campaign_donations (
         donation_id SERIAL PRIMARY KEY,
@@ -272,7 +275,7 @@ async function initDB() {
       )
     `;
 
-    // ── Table 12: Notifications ─────────────────────────────────────────────
+    // ── Table 12: Notifications ──────────────────────────────────────────────
     await sql`
       CREATE TABLE IF NOT EXISTS notifications (
         notification_id SERIAL PRIMARY KEY,
@@ -287,8 +290,9 @@ async function initDB() {
     `;
 
     console.log('✅ Database initialized successfully!');
-    console.log('✅ Campaign approval system ready!');
+    console.log('✅ Deadline-based blood request system ready!');
     console.log('✅ Volunteer application system ready!');
+    console.log('✅ Campaign approval system ready!');
 
   } catch (error) {
     console.error('❌ Error initializing database:', error);
@@ -303,7 +307,8 @@ async function initDB() {
 app.get('/', (req, res) => {
   res.json({ 
     message: 'AshaSetu API Server is running 🚀',
-    version: '1.0.0',
+    version: '2.0.0',
+    system: 'Deadline-based Blood Request System',
     endpoints: {
       auth:          '/api/auth',
       blood:         '/api/blood',
@@ -311,7 +316,7 @@ app.get('/', (req, res) => {
       community:     '/api/community',
       chat:          '/api/chat',
       campaigns:     '/api/campaigns',
-      payment:       '/api/payment', // ← NEW
+      payment:       '/api/payment',
       notifications: '/api/notifications',
       admin:         '/api/admin',
       volunteer:     '/api/volunteer',
@@ -326,12 +331,11 @@ app.use('/api/donors',        donorRoutes);
 app.use('/api/community',     communityRoutes);
 app.use('/api/chat',          chatRoutes);
 app.use('/api/campaigns',     campaignRoutes);
-app.use('/api/payment',       paymentRoutes); // ← NEW
+app.use('/api/payment',       paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin',         adminRoutes);
 app.use('/api/volunteer',     volunteerRoutes);
 app.use('/api/upload',        uploadRoutes);
-app.use('/api/payment',       paymentRoutes);
 
 // ============================================
 // START SERVER
