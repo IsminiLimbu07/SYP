@@ -14,23 +14,67 @@ import {
   Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Picker } from '@react-native-picker/picker';
 import { AuthContext } from '../context/AuthContext';
 import { registerUser } from '../api/auth';
 
-const REQUIRED_FIELDS = ['full_name', 'email', 'city', 'phone_number', 'password'];
+const REQUIRED_FIELDS = ['full_name', 'email', 'city', 'phone_number', 'password', 'confirm_password'];
 const POUCH_HEIGHT = 120;
 
+const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+const PROVINCES = [
+  'Koshi', 'Madhesh', 'Bagmati', 'Gandaki', 'Lumbini', 'Karnali', 'Sudurpashchim'
+];
+
+const CITIES_BY_PROVINCE = {
+  Koshi: ['Biratnagar', 'Dharan', 'Itahari', 'Damak', 'Birtamod', 'Ilam', 'Taplejung', 'Phidim', 'Dhankuta', 'Hile', 'Terhathum', 'Myanglung', 'Khandbari', 'Chainpur', 'Tumlingtar', 'Bhojpur', 'Diktel', 'Solukhumbu', 'Salleri', 'Okhaldhunga'],
+  Madhesh: ['Janakpur', 'Birgunj', 'Rajbiraj', 'Lahan', 'Siraha', 'Jaleshwar', 'Gaur', 'Malangwa', 'Bardibas', 'Mirchaiya', 'Dhalkebar', 'Kalaiya', 'Parwanipur', 'Simraungadh', 'Matihani', 'Sabhapur', 'Aurahi', 'Surunga'],
+  Bagmati: ['Kathmandu', 'Lalitpur', 'Bhaktapur', 'Hetauda', 'Bharatpur', 'Bidur', 'Dhulikhel', 'Banepa', 'Panauti', 'Sindhuli', 'Ramechhap', 'Manthali', 'Charikot', 'Dolakha', 'Jiri', 'Nuwakot', 'Trisuli', 'Rasuwa', 'Dhunche', 'Makwanpur'],
+  Gandaki: ['Pokhara', 'Damauli', 'Baglung', 'Gorkha', 'Besisahar', 'Chame', 'Manang', 'Mustang', 'Jomsom', 'Myagdi', 'Beni', 'Parbat', 'Kushma', 'Syangja', 'Waling', 'Kaski', 'Lamjung', 'Tanahu', 'Nawalpur', 'Kawasoti'],
+  Lumbini: ['Butwal', 'Bhairahawa', 'Tansen', 'Tulsipur', 'Dang', 'Ghorahi', 'Kapilvastu', 'Taulihawa', 'Arghakhanchi', 'Sandhikharka', 'Gulmi', 'Tamghas', 'Palpa', 'Rolpa', 'Liwang', 'Rukum', 'Musikot', 'Pyuthan', 'Nawalparasi', 'Bardaghat'],
+  Karnali: ['Birendranagar', 'Jumla', 'Dailekh', 'Narayan', 'Dolpa', 'Dunai', 'Humla', 'Simikot', 'Jajarkot', 'Khalanga', 'Kalikot', 'Manma', 'Mugu', 'Gamgadhi', 'Salyan', 'Sharada', 'Surkhet', 'Rukum West', 'Achham', 'Sanfebagar'],
+  Sudurpashchim: ['Dhangadhi', 'Mahendranagar', 'Dadeldhura', 'Baitadi', 'Darchula', 'Bajhang', 'Chainpur', 'Bajura', 'Martadi', 'Accham', 'Mangalsen', 'Doti', 'Dipayal', 'Kanchanpur', 'Bhimdatta', 'Seti', 'Godawari', 'Punarbas', 'Bedkot', 'Shuklaphanta'],
+};
+
 // ─── Isolated field — typing only re-renders THIS component ──────────────────
-const FormField = memo(({ fieldKey, label, placeholder, scrollY, keyboardType,
-  secure, hint, maxLength, autoCapitalize, value, onChangeText, scrollRef }) => {
+const FormField = memo(({ fieldKey, label, placeholder, keyboardType,
+  secure, hint, maxLength, autoCapitalize, value, onChangeText, scrollRef, fieldOffsets  }) => {
 
   const [isFocused, setIsFocused] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const hasValue = value?.length > 0;
 
+  const handleLayout = useCallback((e) => {
+
+    // Store the y-offset of this field so we can scroll to it on focus
+
+    fieldOffsets.current[fieldKey] = e.nativeEvent.layout.y;
+
+  }, [fieldKey, fieldOffsets]);
+
+
+  const handleFocus = useCallback(() => {
+
+    setIsFocused(true);
+
+    const y = fieldOffsets.current[fieldKey] ?? 0;
+
+    // Slight delay lets the keyboard start appearing before we scroll,
+
+    // so we land at the right position after layout settles
+
+    setTimeout(() => {
+
+      scrollRef.current?.scrollTo({ y, animated: true });
+
+    }, 120);
+
+  }, [fieldKey, fieldOffsets, scrollRef]);
+
   return (
-    <View style={styles.fieldGroup}>
-      <View style={styles.labelRow}>
+      <View style={styles.fieldGroup} onLayout={handleLayout}>      
+        <View style={styles.labelRow}>
         <Text style={[styles.fieldLabel, isFocused && styles.fieldLabelFocused]}>{label}</Text>
         {hasValue && <Text style={styles.checkmark}>✓</Text>}
       </View>
@@ -46,10 +90,7 @@ const FormField = memo(({ fieldKey, label, placeholder, scrollY, keyboardType,
           placeholderTextColor="#bbb"
           value={value}
           onChangeText={onChangeText}
-          onFocus={() => {
-            setIsFocused(true);
-            scrollRef.current?.scrollTo({ y: scrollY, animated: true });
-          }}
+          onFocus={handleFocus}
           onBlur={() => setIsFocused(false)}
           secureTextEntry={secure && !showPass}
           keyboardType={keyboardType || 'default'}
@@ -120,11 +161,13 @@ const BloodPouch = memo(({ filledCount, isComplete, fillAnim, pulseAnim }) => {
 const RegisterScreen_Dark = ({ navigation }) => {
   const { login } = useContext(AuthContext);
   const scrollViewRef = useRef(null);
+  const fieldOffsets = useRef({});
 
   const [formData, setFormData] = useState({
     full_name: '', email: '', city: '',
-    phone_number: '', blood_type: '', district: '', password: '',
+    phone_number: '', blood_type: '', province: '', password: '', confirm_password: '',
   });
+  const [selectedProvince, setSelectedProvince] = useState('');
   const [loading, setLoading] = useState(false);
   const [filledCount, setFilledCount] = useState(0);
 
@@ -183,7 +226,7 @@ const RegisterScreen_Dark = ({ navigation }) => {
   }, []);
 
   const handleRegister = async () => {
-    if (!formData.full_name || !formData.email || !formData.city || !formData.phone_number || !formData.password) {
+    if (!formData.full_name || !formData.email || !formData.city || !formData.phone_number || !formData.password || !formData.confirm_password) {
       Alert.alert('Required Fields Missing', 'Please fill in all required fields.');
       return;
     }
@@ -199,9 +242,13 @@ const RegisterScreen_Dark = ({ navigation }) => {
       Alert.alert('Weak Password', 'Password must be at least 6 characters.');
       return;
     }
+    if (formData.password !== formData.confirm_password) {
+      Alert.alert('Password Mismatch', 'Passwords do not match.');
+      return;
+    }
     setLoading(true);
     try {
-      const { district, ...registerData } = formData;
+      const { province, confirm_password, ...registerData } = formData;
       const response = await registerUser(registerData);
       if (response.success) await login(response.token, response.user);
     } catch (error) {
@@ -240,13 +287,69 @@ const RegisterScreen_Dark = ({ navigation }) => {
 
         {/* Form */}
         <View style={styles.form}>
-          <FormField fieldKey="full_name" label="Full Name *" placeholder="Your full name" scrollY={0} autoCapitalize="words" value={formData.full_name} onChangeText={v => updateField('full_name', v)} scrollRef={scrollViewRef} />
-          <FormField fieldKey="email" label="Email Address *" placeholder="your@email.com" scrollY={80} keyboardType="email-address" autoCapitalize="none" value={formData.email} onChangeText={v => updateField('email', v)} scrollRef={scrollViewRef} />
-          <FormField fieldKey="city" label="City *" placeholder="Your city" scrollY={160} autoCapitalize="words" value={formData.city} onChangeText={v => updateField('city', v)} scrollRef={scrollViewRef} />
-          <FormField fieldKey="phone_number" label="Phone Number *" placeholder="98XXXXXXXX" scrollY={240} keyboardType="phone-pad" hint="Must start with 98 · 10 digits total" maxLength={10} value={formData.phone_number} onChangeText={v => updateField('phone_number', v)} scrollRef={scrollViewRef} />
-          <FormField fieldKey="blood_type" label="Blood Type (Optional)" placeholder="e.g. A+, O-, AB+" scrollY={320} autoCapitalize="characters" value={formData.blood_type} onChangeText={v => updateField('blood_type', v)} scrollRef={scrollViewRef} />
-          <FormField fieldKey="district" label="District (Optional)" placeholder="Your district" scrollY={400} autoCapitalize="words" value={formData.district} onChangeText={v => updateField('district', v)} scrollRef={scrollViewRef} />
-          <FormField fieldKey="password" label="Password *" placeholder="Min. 6 characters" scrollY={480} secure hint="At least 6 characters" autoCapitalize="none" value={formData.password} onChangeText={v => updateField('password', v)} scrollRef={scrollViewRef} />
+          <FormField fieldKey="full_name" label="Full Name *" placeholder="Your full name" autoCapitalize="words" value={formData.full_name} onChangeText={v => updateField('full_name', v)} scrollRef={scrollViewRef} fieldOffsets={fieldOffsets} />
+          <FormField fieldKey="email" label="Email Address *" placeholder="your@email.com" keyboardType="email-address" autoCapitalize="none" value={formData.email} onChangeText={v => updateField('email', v)} scrollRef={scrollViewRef} fieldOffsets={fieldOffsets} />
+          <FormField fieldKey="phone_number" label="Phone Number *" placeholder="98XXXXXXXX" keyboardType="phone-pad" hint="Must start with 98 · 10 digits total" maxLength={10} value={formData.phone_number} onChangeText={v => updateField('phone_number', v)} scrollRef={scrollViewRef} fieldOffsets={fieldOffsets} />
+          <View style={styles.fieldGroup} onLayout={(e) => fieldOffsets.current['blood_type'] = e.nativeEvent.layout.y}>
+            <View style={styles.labelRow}>
+              <Text style={[styles.fieldLabel, formData.blood_type && styles.fieldLabelFocused]}>Blood Type (Optional)</Text>
+              {formData.blood_type && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <View style={[styles.inputBox, formData.blood_type && styles.inputBoxFilled]}>
+              <View style={[styles.accentBar, { backgroundColor: formData.blood_type ? '#8B0000' : '#f0dede' }]} />
+              <Picker
+                selectedValue={formData.blood_type}
+                onValueChange={(itemValue) => updateField('blood_type', itemValue)}
+                style={styles.picker}
+              >
+                <Picker.Item label="Select Blood Type" value="" />
+                {BLOOD_TYPES.map(type => <Picker.Item key={type} label={type} value={type} />)}
+              </Picker>
+            </View>
+          </View>
+          <View style={styles.fieldGroup} onLayout={(e) => fieldOffsets.current['province'] = e.nativeEvent.layout.y}>
+            <View style={styles.labelRow}>
+              <Text style={[styles.fieldLabel, formData.province && styles.fieldLabelFocused]}>Province (Optional)</Text>
+              {formData.province && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <View style={[styles.inputBox, formData.province && styles.inputBoxFilled]}>
+              <View style={[styles.accentBar, { backgroundColor: formData.province ? '#8B0000' : '#f0dede' }]} />
+              <Picker
+                selectedValue={formData.province}
+                onValueChange={(itemValue) => {
+                  if (itemValue !== selectedProvince) {
+                    updateField('city', '');
+                  }
+                  setSelectedProvince(itemValue);
+                  updateField('province', itemValue);
+                }}
+                style={styles.picker}
+              >
+                <Picker.Item label="Select Province" value="" />
+                {PROVINCES.map(prov => <Picker.Item key={prov} label={prov} value={prov} />)}
+              </Picker>
+            </View>
+          </View>
+          <View style={styles.fieldGroup} onLayout={(e) => fieldOffsets.current['city'] = e.nativeEvent.layout.y}>
+            <View style={styles.labelRow}>
+              <Text style={[styles.fieldLabel, formData.city && styles.fieldLabelFocused]}>City *</Text>
+              {formData.city && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <View style={[styles.inputBox, formData.city && styles.inputBoxFilled]}>
+              <View style={[styles.accentBar, { backgroundColor: formData.city ? '#8B0000' : '#f0dede' }]} />
+              <Picker
+                selectedValue={formData.city}
+                onValueChange={(itemValue) => updateField('city', itemValue)}
+                style={styles.picker}
+                enabled={!!selectedProvince}
+              >
+                <Picker.Item label={selectedProvince ? "Select City" : "Select Province First"} value="" />
+                {selectedProvince && CITIES_BY_PROVINCE[selectedProvince]?.map(city => <Picker.Item key={city} label={city} value={city} />)}
+              </Picker>
+            </View>
+          </View>
+          <FormField fieldKey="password" label="Password *" placeholder="Min. 6 characters" secure hint="At least 6 characters" autoCapitalize="none" value={formData.password} onChangeText={v => updateField('password', v)} scrollRef={scrollViewRef} fieldOffsets={fieldOffsets} />
+          <FormField fieldKey="confirm_password" label="Confirm Password *" placeholder="Re-enter password" secure hint="Must match password" autoCapitalize="none" value={formData.confirm_password} onChangeText={v => updateField('confirm_password', v)} scrollRef={scrollViewRef} fieldOffsets={fieldOffsets} />
 
           <View style={styles.terms}>
             <View style={styles.termsDivider} />
@@ -399,6 +502,10 @@ const styles = StyleSheet.create({
   inputBoxFilled: { borderColor: 'rgba(139,0,0,0.2)', backgroundColor: '#fff' },
   accentBar: { width: 4, alignSelf: 'stretch' },
   textInput: {
+    flex: 1, fontSize: 15, color: '#1a1a1a',
+    paddingHorizontal: 12, paddingVertical: 15,
+  },
+  picker: {
     flex: 1, fontSize: 15, color: '#1a1a1a',
     paddingHorizontal: 12, paddingVertical: 15,
   },

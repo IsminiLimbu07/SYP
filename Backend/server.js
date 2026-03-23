@@ -342,13 +342,15 @@ app.use('/api/upload',        uploadRoutes);
 // ============================================
 
 initDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📍 API Base URL: http://localhost:${PORT}`);
-    console.log(`🩸 Blood requests: http://localhost:${PORT}/api/blood/requests`);
-    console.log(`💰 Campaigns:      http://localhost:${PORT}/api/campaigns`);
-    console.log(`👥 Volunteers:     http://localhost:${PORT}/api/volunteer`);
-  });
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+        //console.log(`📲 Ngrok URL: https://valery-bridgeless-undesignedly.ngrok-free.dev`); // kept for reference
+        console.log(`📍 API Base URL: http://0.0.0.0:${PORT}`);
+        console.log(`🏥 Health check: http://localhost:${PORT}/`);
+        console.log(`✨ Community features enabled!`);
+        console.log(`\n🎯 Ready to accept requests!\n`);
+    });
+}).catch(error => {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
 });
-
-export default app;

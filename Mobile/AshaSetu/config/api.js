@@ -1,11 +1,13 @@
-// ─── IMPORTANT: Update this URL every time you restart ngrok ─────────────────
-// Run: ngrok http 9000
-// Then copy the https URL it gives you and paste it below
-const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
+// Previously used ngrok tunnel URL (kept here for reference):
+// const NGROK_URL = 'https://valery-bridgeless-undesignedly.ngrok-free.dev';
 
-// ─── Derived URLs ─────────────────────────────────────────────────────────────
-const API_BASE_URL    = `${NGROK_URL}/api`;
-const SERVER_BASE_URL = NGROK_URL;
+// Local IP configuration (commented out while using ngrok)
+const API_BASE_URL = 'http://192.168.100.63:9000/api';
+const SERVER_BASE_URL = 'http://192.168.100.63:9000';
+
+// Use ngrok for tunneling during development
+// const API_BASE_URL = `${NGROK_URL}/api`;
+// const SERVER_BASE_URL = NGROK_URL;
 
 // ─── API Configuration ────────────────────────────────────────────────────────
 export const apiConfig = {

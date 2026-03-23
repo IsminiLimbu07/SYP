@@ -1,9 +1,17 @@
 // Mobile/AshaSetu/screens/LoginScreen.jsx
 import React, { useState, useContext } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, TouchableOpacity,
-  Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
-  Image, ScrollView, Dimensions, StatusBar,
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StatusBar,
+  Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
@@ -37,10 +45,7 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#C19A6B" translucent={false} />
 
       <ScrollView
@@ -148,35 +153,147 @@ const LoginScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View >
   );
 };
 
 const styles = StyleSheet.create({
-  container:           { flex: 1, backgroundColor: '#C19A6B' },
-  scrollContent:       { flexGrow: 1, minHeight: SCREEN_HEIGHT },
-  topSection:          { height: 320, backgroundColor: '#C19A6B', justifyContent: 'center', alignItems: 'center', paddingTop: 50 },
-  logoContainer:       { alignItems: 'center' },
-  logoImage:           { width: 380, height: 500 },
-  bottomSection:       { flex: 1, backgroundColor: '#d8dce0ff', borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingTop: 10, paddingBottom: 30 },
-  welcomeCard:         { backgroundColor: '#8B0000', marginHorizontal: 20, marginTop: 40, paddingHorizontal: 25, paddingTop: 30, paddingBottom: 25, borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8 },
-  welcomeTitle:        { fontSize: 36, fontWeight: 'bold', color: '#fff', letterSpacing: 3, marginBottom: 8, textAlign: 'center' },
-  welcomeSubtitle:     { fontSize: 13, color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginBottom: 25 },
-  inputGroup:          { marginBottom: 18 },
-  label:               { fontSize: 13, color: '#fff', marginBottom: 8, fontWeight: '500' },
-  inputWrapper:        { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 8, paddingHorizontal: 12 },
-  iconStyle:           { marginRight: 10 },
-  input:               { flex: 1, paddingVertical: 12, fontSize: 14, color: '#fff' },
-  eyeButton:           { padding: 8, marginLeft: 8 },
-  forgotPassword:      { alignSelf: 'flex-end', marginTop: 5, marginBottom: 20 },
-  forgotPasswordText:  { color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '500' },
-  loginButton:         { backgroundColor: 'rgba(0,0,0,0.3)', paddingVertical: 14, borderRadius: 10, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 5 },
-  loginButtonDisabled: { backgroundColor: '#B8B8B8' },
-  loginButtonText:     { color: '#fff', fontSize: 18, fontWeight: 'bold', marginRight: 8 },
-  loginArrow:          { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-  registerSection:     { flexDirection: 'row', justifyContent: 'center', marginTop: 20, paddingBottom: 20 },
-  registerText:        { fontSize: 14, color: '#5C0000' },
-  registerLink:        { fontSize: 14, color: '#8B0000', fontWeight: 'bold', textDecorationLine: 'underline' },
+  container: {
+    flex: 1,
+    backgroundColor: '#C19A6B'
+  },
+  scrollContent: {
+    flexGrow: 1,
+    minHeight: SCREEN_HEIGHT
+  },
+  topSection: {
+    height: 320,
+    backgroundColor: '#C19A6B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 50
+  },
+  logoContainer: {
+    alignItems: 'center'
+  },
+  logoImage: {
+    width: 380,
+    height: 500
+  },
+  bottomSection: {
+    flex: 1,
+    backgroundColor: '#d8dce0ff',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 10,
+    paddingBottom: 30
+  },
+  welcomeCard: {
+    backgroundColor: '#8B0000',
+    marginHorizontal: 20,
+    marginTop: 40,
+    paddingHorizontal: 25,
+    paddingTop: 30,
+    paddingBottom: 25,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8
+  },
+  welcomeTitle: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#fff',
+    letterSpacing: 3,
+    marginBottom: 8,
+    textAlign: 'center'
+  },
+  welcomeSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 25
+  },
+  inputGroup: {
+    marginBottom: 18
+  },
+  label: {
+    fontSize: 13,
+    color: '#fff',
+    marginBottom: 8,
+    fontWeight: '500'
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 8,
+    paddingHorizontal: 12
+  },
+  iconStyle: {
+    marginRight: 10
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#fff'
+  },
+  eyeButton: {
+    padding: 8,
+    marginLeft: 8
+  },
+  forgotPassword: {
+    alignSelf: 'flex-end',
+    marginTop: 5,
+    marginBottom: 20
+  },
+  forgotPasswordText: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 12,
+    fontWeight: '500'
+  },
+  loginButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    paddingVertical: 14,
+    borderRadius: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 5
+  },
+  loginButtonDisabled: {
+    backgroundColor: '#B8B8B8'
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginRight: 8
+  },
+  loginArrow: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold'
+  },
+  registerSection: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
+    paddingBottom: 20
+  },
+  registerText: {
+    fontSize: 14,
+    color: '#5C0000'
+  },
+  registerLink: {
+    fontSize: 14,
+    color: '#8B0000',
+    fontWeight: 'bold',
+    textDecorationLine: 'underline'
+  }
 });
 
 export default LoginScreen;
