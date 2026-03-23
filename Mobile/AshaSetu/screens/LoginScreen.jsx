@@ -10,17 +10,12 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Image,
   ScrollView,
-  Dimensions,
   StatusBar
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import { loginUser } from '../api/auth';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const LoginScreen = ({ navigation }) => {
   const { login } = useContext(AuthContext);
@@ -55,10 +50,7 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#C19A6B" translucent={false} />
       
       <ScrollView
@@ -161,7 +153,7 @@ const LoginScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View >
   );
 };
 
@@ -172,7 +164,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    minHeight: SCREEN_HEIGHT,
+    paddingBottom: 120,
   },
   topSection: {
     height: 320,
