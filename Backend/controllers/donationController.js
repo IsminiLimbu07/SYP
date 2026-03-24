@@ -245,6 +245,15 @@ export const updateDonationResponse = async (req, res) => {
       RETURNING *
     `;
 
+    // If status is confirmed, update donor's last donation date
+    if (status === 'confirmed') {
+      await sql`
+        UPDATE user_profiles
+        SET last_donation_date = NOW()
+        WHERE user_id = ${response.donor_id}
+      `;
+    }
+
     // Get donor details
     const donor = await sql`
       SELECT 

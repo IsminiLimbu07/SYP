@@ -21,10 +21,10 @@ const signToken = (user) => {
 // Register new user
 export const register = async (req, res) => {
   try {
-    const { full_name, email, phone_number, password } = req.body;
+    const { full_name, email, phone_number, password, city, province, blood_type } = req.body;
 
-    if (!full_name || !email || !phone_number || !password) {
-      return res.status(400).json({ success: false, message: 'All fields are required' });
+    if (!full_name || !email || !phone_number || !password || !blood_type) {
+      return res.status(400).json({ success: false, message: 'All fields are required, including blood type' });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -67,7 +67,14 @@ export const register = async (req, res) => {
       RETURNING user_id, full_name, email, phone_number, is_admin, created_at
     `;
 
-    await sql`INSERT INTO user_profiles (user_id) VALUES (${newUser[0].user_id})`;
+    await sql`
+      INSERT INTO user_profiles (user_id, city, blood_group)
+      VALUES (
+        ${newUser[0].user_id},
+        ${city || null},
+        ${blood_type || null}
+      )
+    `;
 
     const token = signToken(newUser[0]);
 
