@@ -2,6 +2,7 @@
 import express from 'express';
 import { sql } from '../config/db.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
+import { getAllCampaigns } from '../controllers/campaignController.js';
 
 const router = express.Router();
 
@@ -39,6 +40,11 @@ router.get('/my-status', authenticateToken, async (req, res) => {
         return res.status(500).json({ success: false, message: 'Failed to fetch status' });
     }
 });
+
+// ═══════════════════════════════════════════════════
+// GET /api/community/campaigns (redirect to campaigns route)
+// ═══════════════════════════════════════════════════
+router.get('/campaigns', authenticateToken, getAllCampaigns);
 
 // ═══════════════════════════════════════════════════
 // POST /api/community/become-volunteer
