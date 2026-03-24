@@ -55,10 +55,10 @@ export default function DonationScreen({ navigation }) {
 
   const fetchCampaigns = async () => {
     try {
-      console.log('[Donation] Fetching campaigns from:', `${apiConfig.BASE_URL}/community/campaigns`);
+      console.log('[Donation] Fetching campaigns from:', apiConfig.ENDPOINTS.CAMPAIGNS.ALL);
       console.log('[Donation] Token available:', !!token);
 
-      const response = await fetch(`${apiConfig.BASE_URL}/community/campaigns`, {
+      const response = await fetch(apiConfig.ENDPOINTS.CAMPAIGNS.ALL, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',

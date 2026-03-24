@@ -158,15 +158,15 @@ export default function RespondToRequestScreen({ route, navigation }) {
             <View style={styles.bloodCheckRow}>
               <Text style={styles.bloodCheckLabel}>Your Blood Type:</Text>
               <Text style={styles.bloodCheckValue}>
-                {user?.blood_group || 'Not specified'}
+                {user?.profile?.blood_group || 'Not specified'}
               </Text>
             </View>
 
-            {user?.blood_group && user.blood_group !== request.blood_group && (
+            {user?.profile?.blood_group && user.profile.blood_group !== request.blood_group && (
               <View style={styles.warningBox}>
                 <MaterialCommunityIcons name="alert" size={20} color="#FF9800" />
                 <Text style={styles.warningText}>
-                  Note: Your blood type ({user.blood_group}) doesn't match the requested type (
+                  Note: Your blood type ({user.profile.blood_group}) doesn't match the requested type (
                   {request.blood_group}). Please confirm you can donate.
                 </Text>
               </View>
@@ -175,8 +175,8 @@ export default function RespondToRequestScreen({ route, navigation }) {
             <View style={styles.bloodCheckRow}>
               <Text style={styles.bloodCheckLabel}>Last Donation:</Text>
               <Text style={styles.bloodCheckValue}>
-                {user?.last_donation_date
-                  ? new Date(user.last_donation_date).toLocaleDateString()
+                {user?.profile?.last_donation_date
+                  ? new Date(user.profile.last_donation_date).toLocaleDateString()
                   : 'Never'}
               </Text>
             </View>

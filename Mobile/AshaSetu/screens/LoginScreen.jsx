@@ -11,7 +11,9 @@ import {
   Image,
   ScrollView,
   StatusBar,
-  Dimensions
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
@@ -45,7 +47,11 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+    >
       <StatusBar barStyle="dark-content" backgroundColor="#C19A6B" translucent={false} />
 
       <ScrollView
@@ -153,18 +159,19 @@ const LoginScreen = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
-    </View >
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#C19A6B'
+    backgroundColor: '#d8dce0ff'  // Changed to gray to match card color and avoid golden-brown bottom strip
   },
   scrollContent: {
     flexGrow: 1,
-    minHeight: SCREEN_HEIGHT
+    minHeight: SCREEN_HEIGHT,
+    paddingBottom: 20
   },
   topSection: {
     height: 320,
@@ -186,11 +193,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     paddingTop: 10,
-    paddingBottom: 30
+    paddingBottom: 50,
+    paddingHorizontal: 20
   },
   welcomeCard: {
     backgroundColor: '#8B0000',
-    marginHorizontal: 20,
+    marginHorizontal: 0,
     marginTop: 40,
     paddingHorizontal: 25,
     paddingTop: 30,

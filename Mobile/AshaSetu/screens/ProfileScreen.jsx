@@ -165,6 +165,39 @@ const ProfileScreen = ({ navigation, route }) => {
           </View>
         </View>
 
+        {/* ── Donation Profile ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Donation Profile</Text>
+          <View style={styles.infoCard}>
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Blood Type</Text>
+              <Text style={styles.infoValue}>{user?.profile?.blood_group || 'Not specified'}</Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Last Donation</Text>
+              <Text style={styles.infoValue}>
+                {user?.profile?.last_donation_date
+                  ? new Date(user.profile.last_donation_date).toLocaleDateString()
+                  : 'Never'}
+              </Text>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Available to Donate</Text>
+              <Text style={styles.infoValue}>
+                {user?.profile?.available_to_donate ? 'Yes' : 'No'}
+              </Text>
+            </View>
+
+          </View>
+        </View>
+
         {/* ── Actions ── */}
         {isOwnProfile && (
           <View style={styles.section}>

@@ -91,16 +91,29 @@ export default function CommunityHomeScreen({ navigation }) {
       const params = new URLSearchParams({ status: 'upcoming' });
       if (city) params.append('city', city);
 
-      const url = `${BASE}/community/events?${params.toString()}`;
+      let url = `${BASE}/community/events?${params.toString()}`;
       console.log('[Community] loadEvents ->', url);
-      const response = await fetch(url, {
+      let response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await response.json();
+      let data = await response.json();
       console.log('[Community] events:', data.success, 'count:', data.data?.length);
-      if (data.success) setEvents(data.data);
+
+      // Fallback: if user city filter returns empty and we are in city-mode, fetch generic upcoming events
+      if (city && data.success && Array.isArray(data.data) && data.data.length === 0) {
+        url = `${BASE}/community/events?status=upcoming`;
+        console.log('[Community] No local events found, falling back to all events ->', url);
+        response = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        data = await response.json();
+        console.log('[Community] fallback events:', data.success, 'count:', data.data?.length);
+      }
+
+      if (data.success) setEvents(data.data || []);
     } catch (error) {
       console.error('[Community] loadEvents error:', error.message);
+      setEvents([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
