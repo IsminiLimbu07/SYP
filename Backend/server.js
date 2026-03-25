@@ -170,22 +170,26 @@ async function initDB() {
     await sql`CREATE INDEX IF NOT EXISTS idx_donation_responses_donor ON donation_responses(donor_id)`;
 
     // ── Table 6: Donation Events ─────────────────────────────────────────────
+    await sql`DROP TABLE IF EXISTS donation_events CASCADE`;
     await sql`
-      CREATE TABLE IF NOT EXISTS donation_events (
+      CREATE TABLE donation_events (
         event_id SERIAL PRIMARY KEY,
         organizer_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
         title VARCHAR(255) NOT NULL,
-        description TEXT NOT NULL,
-        event_date TIMESTAMP NOT NULL,
-        location_name VARCHAR(255) NOT NULL,
-        location_lat DECIMAL(10, 8),
-        location_lng DECIMAL(11, 8),
+        description TEXT,
+        event_date DATE NOT NULL,
+        start_time TIME NOT NULL,
+        end_time TIME NOT NULL,
+        location VARCHAR(255) NOT NULL,
+        city VARCHAR(100) NOT NULL,
         address TEXT,
+        contact_number VARCHAR(20),
         max_participants INTEGER,
         image_url TEXT,
-        status VARCHAR(20) DEFAULT 'upcoming' 
+        status VARCHAR(20) DEFAULT 'upcoming'
           CHECK (status IN ('upcoming', 'ongoing', 'completed', 'cancelled')),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
 

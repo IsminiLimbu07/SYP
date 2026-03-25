@@ -9,7 +9,6 @@ const router = express.Router();
 // ═══════════════════════════════════════════════════
 // GET /api/community/my-status
 // Returns current user's volunteer status
-// NEW endpoint — called by CommunityHomeScreen on load
 // ═══════════════════════════════════════════════════
 router.get('/my-status', authenticateToken, async (req, res) => {
     try {
@@ -62,7 +61,6 @@ router.post('/become-volunteer', authenticateToken, async (req, res) => {
         }
 
         if (existingUser.is_volunteer) {
-            // Return success so frontend still updates state correctly
             return res.status(200).json({
                 success: true,
                 message: 'You are already a volunteer',
@@ -351,15 +349,28 @@ router.put('/events/:eventId', authenticateToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'No valid fields to update' });
         }
 
-        const setClauses = fields.map((field) => sql`${sql(field)} = ${body[field]}`);
-        let setFragment  = setClauses[0];
-        for (let i = 1; i < setClauses.length; i++) {
-            setFragment = sql`${setFragment}, ${setClauses[i]}`;
-        }
+        // Update the event with provided fields
+        const updateData = {};
+        fields.forEach(field => {
+            updateData[field] = body[field];
+        });
 
         const [updated] = await sql`
             UPDATE donation_events
-            SET ${setFragment}, updated_at = CURRENT_TIMESTAMP
+            SET
+                title = COALESCE(${updateData.title}, title),
+                description = COALESCE(${updateData.description}, description),
+                event_date = COALESCE(${updateData.event_date}, event_date),
+                start_time = COALESCE(${updateData.start_time}, start_time),
+                end_time = COALESCE(${updateData.end_time}, end_time),
+                location = COALESCE(${updateData.location}, location),
+                city = COALESCE(${updateData.city}, city),
+                address = COALESCE(${updateData.address}, address),
+                contact_number = COALESCE(${updateData.contact_number}, contact_number),
+                image_url = COALESCE(${updateData.image_url}, image_url),
+                max_participants = COALESCE(${updateData.max_participants}, max_participants),
+                status = COALESCE(${updateData.status}, status),
+                updated_at = CURRENT_TIMESTAMP
             WHERE event_id = ${eventId}
             RETURNING *
         `;
@@ -368,6 +379,67 @@ router.put('/events/:eventId', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Error updating event:', error);
         return res.status(500).json({ success: false, message: 'Failed to update event' });
+    }
+});
+
+// ═══════════════════════════════════════════════════
+// DELETE /api/community/events/:eventId (admin only)
+// ═══════════════════════════════════════════════════
+router.delete('/events/:eventId', authenticateToken, async (req, res) => {
+    try {
+        const userId  = req.user.user_id;
+        const eventId = parseInt(req.params.eventId);
+
+        if (isNaN(eventId)) {
+            return res.status(400).json({ success: false, message: 'Invalid event ID' });
+        }
+
+        // Check if user is admin (database check for real-time effect)
+        const [adminUser] = await sql`
+            SELECT is_admin FROM users
+            WHERE user_id = ${userId} AND is_active = true
+        `;
+
+        if (!adminUser || !adminUser.is_admin) {
+            return res.status(403).json({
+                success: false,
+                message: 'Admin access required to delete events'
+            });
+        }
+
+        // Verify event exists
+        const [event] = await sql`
+            SELECT event_id, title, organizer_id FROM donation_events
+            WHERE event_id = ${eventId}
+        `;
+
+        if (!event) {
+            return res.status(404).json({ success: false, message: 'Event not found' });
+        }
+
+        // Cascading deletes — ratings first, then participants, then event
+        await sql`DELETE FROM event_ratings WHERE event_id = ${eventId}`;
+        await sql`DELETE FROM event_participants WHERE event_id = ${eventId}`;
+        await sql`DELETE FROM donation_events WHERE event_id = ${eventId}`;
+
+        // Decrement organizer's event count
+        if (event.organizer_id) {
+            await sql`
+                UPDATE users
+                SET events_organized = GREATEST(0, events_organized - 1),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ${event.organizer_id}
+            `;
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Event "${event.title}" deleted successfully`,
+        });
+
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        return res.status(500).json({ success: false, message: 'Failed to delete event' });
     }
 });
 
@@ -392,6 +464,14 @@ router.post('/events/:eventId/register', authenticateToken, async (req, res) => 
             return res.status(404).json({
                 success: false,
                 message: 'Event not found or not available for registration',
+            });
+        }
+
+        // Prevent organizers from registering for their own events
+        if (event.organizer_id === userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'You cannot register for your own event',
             });
         }
 

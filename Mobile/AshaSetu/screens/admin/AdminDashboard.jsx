@@ -12,7 +12,7 @@ import {
   Modal,
   RefreshControl,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';  // ← correct
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
 import { getUsers, deleteUser } from '../../api/admin';
 
@@ -144,6 +144,7 @@ const AdminDashboard = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+
       {/* ── Stats ── */}
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
@@ -164,14 +165,16 @@ const AdminDashboard = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Campaign Management Card */}
+      {/* ── Management Cards ── */}
+
+      {/* Campaign Management */}
       <TouchableOpacity
         style={styles.managementCard}
         onPress={() => navigation.navigate('ManageCampaigns')}
         activeOpacity={0.8}
       >
         <View style={styles.managementCardHeader}>
-          <View style={styles.managementCardIcon}>
+          <View style={[styles.managementCardIcon, { backgroundColor: '#fff5f5' }]}>
             <Ionicons name="heart" size={24} color="#8B0000" />
           </View>
           <View style={{ flex: 1 }}>
@@ -184,20 +187,40 @@ const AdminDashboard = ({ navigation }) => {
         </View>
       </TouchableOpacity>
 
-      {/* Volunteer Management Card */}
+      {/* Volunteer Management */}
       <TouchableOpacity
         style={styles.managementCard}
         onPress={() => navigation.navigate('ManageVolunteers')}
         activeOpacity={0.8}
       >
         <View style={styles.managementCardHeader}>
-          <View style={styles.managementCardIcon}>
-            <Ionicons name="people" size={24} color="#8B0000" />
+          <View style={[styles.managementCardIcon, { backgroundColor: '#f0f9f0' }]}>
+            <Ionicons name="people" size={24} color="#2E7D32" />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.managementCardTitle}>Volunteer Management</Text>
             <Text style={styles.managementCardSubtitle}>
               Review applications and manage volunteers
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </View>
+      </TouchableOpacity>
+
+      {/* ── NEW: Event Management Card ── */}
+      <TouchableOpacity
+        style={styles.managementCard}
+        onPress={() => navigation.navigate('ManageEvents')}
+        activeOpacity={0.8}
+      >
+        <View style={styles.managementCardHeader}>
+          <View style={[styles.managementCardIcon, { backgroundColor: '#fff8e1' }]}>
+            <Ionicons name="calendar" size={24} color="#F57F17" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.managementCardTitle}>Event Management</Text>
+            <Text style={styles.managementCardSubtitle}>
+              View and delete blood donation events
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#999" />
@@ -222,28 +245,31 @@ const AdminDashboard = ({ navigation }) => {
       </View>
 
       {/* ── User List ── */}
-      {loading && !refreshing ? (
-        <ActivityIndicator size="large" color="#8B0000" style={{ flex: 1 }} />
+      {loading ? (
+        <ActivityIndicator size="large" color="#8B0000" style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={filteredUsers}
+          keyExtractor={(item) => item.user_id.toString()}
           renderItem={renderUserItem}
-          keyExtractor={item => item.user_id?.toString()}
           contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8B0000" />
-          }
-          ListEmptyComponent={
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          ListEmptyComponent={() => (
             <View style={styles.empty}>
-              <MaterialCommunityIcons name="account-off-outline" size={60} color="#ddd" />
+              <Ionicons name="people-outline" size={48} color="#ddd" />
               <Text style={styles.emptyText}>No users found</Text>
             </View>
-          }
+          )}
         />
       )}
 
       {/* ── User Detail Modal ── */}
-      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -263,14 +289,14 @@ const AdminDashboard = ({ navigation }) => {
                 <Text style={styles.modalUserName}>{selectedUser.full_name}</Text>
 
                 {[
-                  { icon: 'mail-outline',           text: selectedUser.email },
-                  { icon: 'call-outline',            text: selectedUser.phone_number },
-                  { icon: 'water-outline',           text: `Blood Group: ${selectedUser.blood_group || 'Not set'}` },
-                  { icon: 'location-outline',        text: `City: ${selectedUser.city || 'Not set'}` },
-                  { icon: 'calendar-outline',        text: `Joined: ${new Date(selectedUser.created_at).toLocaleDateString('en-US', { timeZone: 'Asia/Kathmandu', year: 'numeric', month: 'short', day: 'numeric' })}` },
-                  { icon: 'shield-outline',          text: `Role: ${selectedUser.is_admin ? 'Administrator' : 'Regular User'}` },
-                  { icon: 'checkmark-circle-outline',text: `Verified: ${selectedUser.is_verified ? '✅ Yes' : '❌ No'}` },
-                  { icon: 'power-outline',           text: `Status: ${selectedUser.is_active ? '🟢 Active' : '🔴 Suspended'}` },
+                  { icon: 'mail-outline',            text: selectedUser.email },
+                  { icon: 'call-outline',             text: selectedUser.phone_number },
+                  { icon: 'water-outline',            text: `Blood Group: ${selectedUser.blood_group || 'Not set'}` },
+                  { icon: 'location-outline',         text: `City: ${selectedUser.city || 'Not set'}` },
+                  { icon: 'calendar-outline',         text: `Joined: ${new Date(selectedUser.created_at).toLocaleDateString('en-US', { timeZone: 'Asia/Kathmandu', year: 'numeric', month: 'short', day: 'numeric' })}` },
+                  { icon: 'shield-outline',           text: `Role: ${selectedUser.is_admin ? 'Administrator' : 'Regular User'}` },
+                  { icon: 'checkmark-circle-outline', text: `Verified: ${selectedUser.is_verified ? '✅ Yes' : '❌ No'}` },
+                  { icon: 'power-outline',            text: `Status: ${selectedUser.is_active ? '🟢 Active' : '🔴 Suspended'}` },
                 ].map((row, i) => (
                   <View key={i} style={styles.modalRow}>
                     <Ionicons name={row.icon} size={18} color="#666" />
@@ -379,9 +405,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fce8e8', paddingHorizontal: 8,
     paddingVertical: 2, borderRadius: 12, gap: 4,
   },
-  adminBadgeText:   { fontSize: 10, color: '#8B0000', fontWeight: '600' },
-  unverifiedBadge:  { backgroundColor: '#fff3e0', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
-  unverifiedBadgeText:{ fontSize: 10, color: '#e65100', fontWeight: '600' },
+  adminBadgeText:      { fontSize: 10, color: '#8B0000', fontWeight: '600' },
+  unverifiedBadge:     { backgroundColor: '#fff3e0', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
+  unverifiedBadgeText: { fontSize: 10, color: '#e65100', fontWeight: '600' },
   deleteButton: { padding: 8 },
 
   // Empty
@@ -401,8 +427,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     padding: 20, borderBottomWidth: 1, borderBottomColor: '#eee',
   },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
-  modalBody:  { padding: 20 },
+  modalTitle:  { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  modalBody:   { padding: 20 },
   modalAvatar: {
     width: 80, height: 80, borderRadius: 40,
     backgroundColor: '#8B0000',
@@ -430,10 +456,11 @@ const styles = StyleSheet.create({
   modalBtnClose:  { backgroundColor: '#888' },
   modalBtnText:   { color: '#fff', fontSize: 16, fontWeight: '600' },
 
+  // Management cards
   managementCard: {
     backgroundColor: '#fff',
     marginHorizontal: 12,
-    marginBottom: 12,
+    marginBottom: 10,
     borderRadius: 12,
     elevation: 2,
     shadowColor: '#000',
@@ -451,7 +478,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#fff5f5',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -465,7 +491,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
   },
-
 });
 
 export default AdminDashboard;

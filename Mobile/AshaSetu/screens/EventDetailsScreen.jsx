@@ -27,10 +27,13 @@ export default function EventDetailsScreen({ route, navigation }) {
     return `${base}/${url}`;
   };
 
-  const [event, setEvent] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [registering, setRegistering] = useState(false);
-  const [isRegistered, setIsRegistered] = useState(false);
+  const [event, setEvent]                   = useState(null);
+  const [loading, setLoading]               = useState(true);
+  const [registering, setRegistering]       = useState(false);
+  const [isRegistered, setIsRegistered]     = useState(false);
+  // ── RBAC flags ──────────────────────────────────────────────
+  const [isOrganizer, setIsOrganizer]       = useState(false); // volunteer who owns this event
+  const [isAdmin, setIsAdmin]               = useState(false); // admin can delete any event
 
   useEffect(() => {
     loadEventDetails();
@@ -38,16 +41,19 @@ export default function EventDetailsScreen({ route, navigation }) {
 
   const loadEventDetails = async () => {
     try {
-      const response = await fetch(`${apiConfig.BASE_URL}/community/events/${eventId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      const response = await fetch(
+        `${apiConfig.BASE_URL}/community/events/${eventId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       const data = await response.json();
 
       if (data.success) {
         setEvent(data.data);
-        // Check if user is already registered (you'll need to add this to your API)
-        checkRegistrationStatus();
+        // Check organizer: volunteer who created this specific event
+        setIsOrganizer(data.data.organizer_id === user?.user_id);
+        // Check admin: DB-verified flag from user context
+        setIsAdmin(user?.is_admin === true);
+        checkRegistrationStatus(data.data.organizer_id);
       }
     } catch (error) {
       console.error('Error loading event:', error);
@@ -57,20 +63,18 @@ export default function EventDetailsScreen({ route, navigation }) {
     }
   };
 
-  const checkRegistrationStatus = async () => {
+  const checkRegistrationStatus = async (organizerId) => {
     try {
       const response = await fetch(
         `${apiConfig.BASE_URL}/community/events/${eventId}/participants`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       const data = await response.json();
-
       if (data.success) {
-        const userRegistered = data.data.some((p) => p.user_id === user.user_id);
-        setIsRegistered(userRegistered);
+        // Organizers should never be considered registered, even if they have a record
+        const isUserRegistered = data.data.some((p) => p.user_id === user?.user_id);
+        const isUserOrganizer = organizerId === user?.user_id;
+        setIsRegistered(isUserRegistered && !isUserOrganizer);
       }
     } catch (error) {
       console.error('Error checking registration:', error);
@@ -78,6 +82,12 @@ export default function EventDetailsScreen({ route, navigation }) {
   };
 
   const handleRegister = () => {
+    // Double-check: prevent organizers from registering even if UI shows register button
+    if (isOrganizer) {
+      Alert.alert('Error', 'You cannot register for your own event');
+      return;
+    }
+
     Alert.alert(
       'Register for Event',
       'Would you like to register for this blood donation event?',
@@ -96,18 +106,14 @@ export default function EventDetailsScreen({ route, navigation }) {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`,
                   },
-                  body: JSON.stringify({
-                    blood_group: user.blood_group || null,
-                  }),
+                  body: JSON.stringify({ blood_group: user?.blood_group || null }),
                 }
               );
-
               const data = await response.json();
-
               if (data.success) {
                 Alert.alert('Success! 🎉', 'You are now registered for this event.');
                 setIsRegistered(true);
-                loadEventDetails(); // Refresh to update participant count
+                loadEventDetails();
               } else {
                 Alert.alert('Error', data.message || 'Failed to register');
               }
@@ -124,15 +130,60 @@ export default function EventDetailsScreen({ route, navigation }) {
   };
 
   const handleCall = () => {
-    if (event.contact_number) {
-      Linking.openURL(`tel:${event.contact_number}`);
-    } else if (event.organizer_phone) {
-      Linking.openURL(`tel:${event.organizer_phone}`);
-    }
+    const number = event?.contact_number || event?.organizer_phone;
+    if (number) Linking.openURL(`tel:${number}`);
+  };
+
+  // ── Edit: only the volunteer who created the event ───────────
+  const handleEditEvent = () => {
+    navigation.navigate('CreateEvent', { eventId: event.event_id, event });
+  };
+
+  // ── Delete: only admin ────────────────────────────────────────
+  const handleDeleteEvent = () => {
+    Alert.alert(
+      'Delete Event',
+      `Are you sure you want to permanently delete "${event.title}"? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await fetch(
+                `${apiConfig.BASE_URL}/community/events/${eventId}`,
+                {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                }
+              );
+              const data = await response.json();
+              if (data.success) {
+                Alert.alert('Deleted', 'Event deleted successfully.', [
+                  {
+                    text: 'OK',
+                    onPress: () => navigation.goBack(),
+                  },
+                ]);
+              } else {
+                Alert.alert('Error', data.message || 'Failed to delete event');
+              }
+            } catch (error) {
+              console.error('Error deleting event:', error);
+              Alert.alert('Error', 'Failed to delete event');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getEventStatus = () => {
-    const today = new Date();
+    const today     = new Date();
     const eventDate = new Date(event.event_date);
 
     if (eventDate.toDateString() === today.toDateString()) {
@@ -141,13 +192,12 @@ export default function EventDetailsScreen({ route, navigation }) {
       return { text: 'COMPLETED', color: '#999', icon: 'checkmark-circle' };
     } else {
       const daysLeft = Math.ceil((eventDate - today) / (1000 * 60 * 60 * 24));
-      if (daysLeft === 1) {
-        return { text: 'TOMORROW', color: '#FF9800', icon: 'time' };
-      }
+      if (daysLeft === 1) return { text: 'TOMORROW', color: '#FF9800', icon: 'time' };
       return { text: `IN ${daysLeft} DAYS`, color: '#4CAF50', icon: 'calendar' };
     }
   };
 
+  // ── Loading / error states ────────────────────────────────────
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -169,7 +219,7 @@ export default function EventDetailsScreen({ route, navigation }) {
     );
   }
 
-  const status = getEventStatus();
+  const status             = getEventStatus();
   const progressPercentage = event.max_participants
     ? (event.current_participants / event.max_participants) * 100
     : 0;
@@ -177,10 +227,8 @@ export default function EventDetailsScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-
-
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+
         {/* Event Image */}
         {event.image_url ? (
           <Image source={{ uri: getFullImageUrl(event.image_url) }} style={styles.eventImage} />
@@ -197,6 +245,7 @@ export default function EventDetailsScreen({ route, navigation }) {
         </View>
 
         <View style={styles.content}>
+
           {/* Title */}
           <Text style={styles.title}>{event.title}</Text>
 
@@ -289,16 +338,52 @@ export default function EventDetailsScreen({ route, navigation }) {
             </View>
           )}
 
-          {/* Action Buttons */}
+          {/* ── Action Buttons ─────────────────────────────────────── */}
           <View style={styles.actionsSection}>
-            {event.contact_number || event.organizer_phone ? (
+
+            {/* Call organizer */}
+            {(event.contact_number || event.organizer_phone) && (
               <TouchableOpacity style={styles.callButton} onPress={handleCall}>
                 <Ionicons name="call" size={20} color="#8B0000" />
                 <Text style={styles.callButtonText}>Call Organizer</Text>
               </TouchableOpacity>
-            ) : null}
+            )}
 
-            {isRegistered ? (
+            {/*
+              EDIT BUTTON — only the volunteer who CREATED this event.
+              Admins do NOT get edit; they get delete instead.
+            */}
+            {isOrganizer && (
+              <TouchableOpacity
+                style={[styles.callButton, styles.editButton]}
+                onPress={handleEditEvent}
+              >
+                <Ionicons name="create-outline" size={20} color="#1565C0" />
+                <Text style={[styles.callButtonText, { color: '#1565C0' }]}>Edit Event</Text>
+              </TouchableOpacity>
+            )}
+
+            {/*
+              DELETE BUTTON — only for admins.
+              Regular volunteers (even the organizer) cannot delete events.
+            */}
+            {isAdmin && (
+              <TouchableOpacity
+                style={[styles.callButton, styles.deleteButton]}
+                onPress={handleDeleteEvent}
+              >
+                <Ionicons name="trash-outline" size={20} color="#C62828" />
+                <Text style={[styles.callButtonText, { color: '#C62828' }]}>Delete Event</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Register / Already Registered / Organizer Note */}
+            {isOrganizer ? (
+              <View style={styles.organizerBadge}>
+                <MaterialCommunityIcons name="account-star" size={24} color="#8B0000" />
+                <Text style={styles.organizerText}>You organized this event</Text>
+              </View>
+            ) : isRegistered ? (
               <View style={styles.registeredBadge}>
                 <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
                 <Text style={styles.registeredText}>You're Registered!</Text>
@@ -325,6 +410,8 @@ export default function EventDetailsScreen({ route, navigation }) {
               </TouchableOpacity>
             )}
           </View>
+          {/* ──────────────────────────────────────────────────────── */}
+
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -369,19 +456,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  header: {
-    backgroundColor: '#8B0000',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
   },
   scrollView: {
     flex: 1,
@@ -574,6 +648,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#8B0000',
   },
+  // Edit button variant (blue border)
+  editButton: {
+    borderColor: '#1565C0',
+  },
+  // Delete button variant (red border)
+  deleteButton: {
+    borderColor: '#C62828',
+  },
   registerButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -604,5 +686,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#4CAF50',
+  },
+  organizerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#8B0000',
+  },
+  organizerText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8B0000',
   },
 });

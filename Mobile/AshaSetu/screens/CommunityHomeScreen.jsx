@@ -68,18 +68,8 @@ export default function CommunityHomeScreen({ navigation }) {
       headerStyle: { backgroundColor: '#8B0000' },
       headerTintColor: '#fff',
       headerTitleStyle: { fontWeight: 'bold', fontSize: 20 },
-      headerRight: () =>
-        isVolunteer ? (
-          <TouchableOpacity
-            style={styles.createEventBtn}
-            onPress={() => navigation.navigate('CreateEvent')}
-          >
-            <Ionicons name="add-circle" size={24} color="#fff" />
-            <Text style={styles.createEventText}>Create Event</Text>
-          </TouchableOpacity>
-        ) : null,
     });
-  }, [navigation, isVolunteer]);
+  }, [navigation]);
 
   const loadData = async () => {
     await Promise.all([loadEvents(), fetchMyStatus()]);
@@ -182,6 +172,13 @@ export default function CommunityHomeScreen({ navigation }) {
   };
 
   const handleRegister = async (eventId) => {
+    // Find the event to check if user is organizer
+    const event = events.find(e => e.event_id === eventId);
+    if (event && event.organizer_id === user?.user_id) {
+      Alert.alert('Error', 'You cannot register for your own event');
+      return;
+    }
+
     setRegisteringId(eventId);
     const alreadyRegistered = registeredEvents[eventId];
     try {
@@ -316,15 +313,6 @@ export default function CommunityHomeScreen({ navigation }) {
                 Create Event
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.volunteerButton, styles.volunteerButtonApproved]}
-              onPress={() => navigation.navigate('CreateCampaign')}
-            >
-              <Ionicons name="megaphone" size={20} color="#4caf50" />
-              <Text style={[styles.volunteerButtonText, { color: '#4caf50' }]}>
-                Create Campaign
-              </Text>
-            </TouchableOpacity>
           </>
         )}
 
@@ -364,6 +352,7 @@ export default function CommunityHomeScreen({ navigation }) {
             const isFull        = maxP ? participants >= maxP : false;
             const isRegistered  = registeredEvents[event.event_id] || false;
             const isRegistering = registeringId === event.event_id;
+            const isOrganizer   = event.organizer_id === user?.user_id;
 
             return (
               <TouchableOpacity
@@ -432,30 +421,37 @@ export default function CommunityHomeScreen({ navigation }) {
                     </View>
                   ) : null}
 
-                  <TouchableOpacity
-                    style={[
-                      styles.registerBtn,
-                      isFull && !isRegistered && styles.registerBtnDisabled,
-                      isRegistered && styles.registerBtnRegistered,
-                    ]}
-                    onPress={() => handleRegister(event.event_id)}
-                    disabled={(isFull && !isRegistered) || isRegistering}
-                  >
-                    {isRegistering ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <MaterialCommunityIcons
-                          name={isRegistered ? 'check-circle' : 'hand-heart'}
-                          size={20}
-                          color="#fff"
-                        />
-                        <Text style={styles.registerBtnText}>
-                          {isRegistered ? 'Registered ✓' : isFull ? 'Full' : 'Register'}
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
+                  {isOrganizer ? (
+                    <View style={[styles.registerBtn, styles.registerBtnOrganizer]}>
+                      <MaterialCommunityIcons name="account-star" size={20} color="#8B0000" />
+                      <Text style={[styles.registerBtnText, { color: '#8B0000' }]}>Your Event</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[
+                        styles.registerBtn,
+                        isFull && !isRegistered && styles.registerBtnDisabled,
+                        isRegistered && styles.registerBtnRegistered,
+                      ]}
+                      onPress={() => handleRegister(event.event_id)}
+                      disabled={(isFull && !isRegistered) || isRegistering}
+                    >
+                      {isRegistering ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <MaterialCommunityIcons
+                            name={isRegistered ? 'check-circle' : 'hand-heart'}
+                            size={20}
+                            color="#fff"
+                          />
+                          <Text style={styles.registerBtnText}>
+                            {isRegistered ? 'Registered ✓' : isFull ? 'Full' : 'Register'}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
                 </View>
               </TouchableOpacity>
             );
@@ -488,16 +484,6 @@ const styles = StyleSheet.create({
   container:           { flex: 1, backgroundColor: '#F5F5F5' },
   loadingContainer:    { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' },
   loadingText:         { marginTop: 10, fontSize: 16, color: '#666' },
-  createEventBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  createEventText:  { color: '#fff', fontSize: 14, fontWeight: '600' },
   scrollView:       { flex: 1 },
   scrollContent:    { padding: 16 },
   chatroomCard: {
@@ -645,6 +631,7 @@ const styles = StyleSheet.create({
   },
   registerBtnRegistered: { backgroundColor: '#4CAF50' },
   registerBtnDisabled:   { backgroundColor: '#BDBDBD' },
+  registerBtnOrganizer:  { backgroundColor: '#FFF3E0', borderWidth: 1, borderColor: '#8B0000' },
   registerBtnText:       { color: '#fff', fontSize: 15, fontWeight: 'bold' },
   bottomSpacing:         { height: 20 },
   bottomNav: {

@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -21,20 +21,35 @@ import DateTimePicker from "@react-native-community/datetimepicker"
 import { AuthContext } from '../context/AuthContext';
 import { apiConfig } from '../config/api';
 
-export default function CreateEventScreen({ navigation }) {
+export default function CreateEventScreen({ route, navigation }) {
+  const { eventId, event: eventData } = route.params || {};
   const { token } = useContext(AuthContext);
-  
-  // Form state
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [eventDate, setEventDate] = useState(new Date());
-  const [startTime, setStartTime] = useState(new Date());
-  const [endTime, setEndTime] = useState(new Date());
-  const [location, setLocation] = useState('');
-  const [city, setCity] = useState('');
-  const [address, setAddress] = useState('');
-  const [contactNumber, setContactNumber] = useState('');
-  const [maxParticipants, setMaxParticipants] = useState('');
+
+  const isEditMode = !!eventId;
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: isEditMode ? 'Edit Event' : 'Create Event',
+    });
+  }, [navigation, isEditMode]);
+
+  // Form state - initialize with event data if editing
+  const [title, setTitle] = useState(eventData?.title || '');
+  const [description, setDescription] = useState(eventData?.description || '');
+  const [eventDate, setEventDate] = useState(eventData ? new Date(eventData.event_date) : new Date());
+  const [startTime, setStartTime] = useState(eventData?.start_time ? (() => {
+    const [hours, minutes] = eventData.start_time.split(':').map(Number);
+    return new Date(0, 0, 0, hours, minutes);
+  })() : new Date());
+  const [endTime, setEndTime] = useState(eventData?.end_time ? (() => {
+    const [hours, minutes] = eventData.end_time.split(':').map(Number);
+    return new Date(0, 0, 0, hours, minutes);
+  })() : new Date());
+  const [location, setLocation] = useState(eventData?.location || '');
+  const [city, setCity] = useState(eventData?.city || '');
+  const [address, setAddress] = useState(eventData?.address || '');
+  const [contactNumber, setContactNumber] = useState(eventData?.contact_number || '');
+  const [maxParticipants, setMaxParticipants] = useState(eventData?.max_participants?.toString() || '');
   const [imageUri, setImageUri] = useState(null);
   
   // UI state
@@ -180,10 +195,14 @@ export default function CreateEventScreen({ navigation }) {
         max_participants: maxParticipants ? parseInt(maxParticipants) : null,
       };
 
-      console.log('[CreateEvent] Creating event:', eventData);
+      console.log(`[${isEditMode ? 'Update' : 'Create'}Event] ${isEditMode ? 'Updating' : 'Creating'} event:`, eventData);
 
-      const response = await fetch(`${apiConfig.BASE_URL}/community/events`, {
-        method: 'POST',
+      const url = isEditMode
+        ? `${apiConfig.BASE_URL}/community/events/${eventId}`
+        : `${apiConfig.BASE_URL}/community/events`;
+
+      const response = await fetch(url, {
+        method: isEditMode ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -192,12 +211,12 @@ export default function CreateEventScreen({ navigation }) {
       });
 
       const data = await response.json();
-      console.log('[CreateEvent] Response:', data);
+      console.log(`[${isEditMode ? 'Update' : 'Create'}Event] Response:`, data);
 
       if (data.success) {
         Alert.alert(
           'Success! 🎉',
-          'Event created successfully! It will appear in the community feed.',
+          `Event ${isEditMode ? 'updated' : 'created'} successfully! ${!isEditMode ? 'It will appear in the community feed.' : ''}`,
           [
             {
               text: 'OK',
@@ -206,11 +225,11 @@ export default function CreateEventScreen({ navigation }) {
           ]
         );
       } else {
-        Alert.alert('Error', data.message || 'Failed to create event');
+        Alert.alert('Error', data.message || `Failed to ${isEditMode ? 'update' : 'create'} event`);
       }
     } catch (error) {
-      console.error('[CreateEvent] Error:', error);
-      Alert.alert('Error', 'Failed to create event. Please try again.');
+      console.error(`[${isEditMode ? 'Update' : 'Create'}Event] Error:`, error);
+      Alert.alert('Error', `Failed to ${isEditMode ? 'update' : 'create'} event. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -419,7 +438,7 @@ export default function CreateEventScreen({ navigation }) {
               ) : (
                 <>
                   <MaterialCommunityIcons name="calendar-heart" size={24} color="#fff" />
-                  <Text style={styles.createButtonText}>Create Event</Text>
+                  <Text style={styles.createButtonText}>{isEditMode ? 'Update Event' : 'Create Event'}</Text>
                 </>
               )}
             </TouchableOpacity>
