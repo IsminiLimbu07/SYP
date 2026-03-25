@@ -247,11 +247,9 @@ async function initDB() {
       )
     `;
 
-<<<<<<< HEAD
     // ── Table 10: Campaigns ──────────────────────────────────────────────────
-=======
+
     // ── Table 10: Campaigns ─────────────────────────────────────────────────
->>>>>>> donor-notification
     await sql`
       CREATE TABLE IF NOT EXISTS campaigns (
         campaign_id SERIAL PRIMARY KEY,
@@ -376,8 +374,6 @@ initDB().then(() => {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
 });
-<<<<<<< HEAD
-=======
 // server.js - Place at the bottom
 app.use((req, res) => {
   res.status(404).json({
@@ -386,4 +382,3 @@ app.use((req, res) => {
   });
 });
 export default app;
->>>>>>> donor-notification

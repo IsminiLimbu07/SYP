@@ -1,8 +1,8 @@
 // ─── IMPORTANT: Update this URL every time you restart ngrok ─────────────────
 // Run: ngrok http 9000
 // Then copy the https URL it gives you and paste it below
-//const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
-const NGROK_URL ='https://malachi-inconvertible-lita.ngrok-free.dev';
+const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
+//const NGROK_URL ='https://malachi-inconvertible-lita.ngrok-free.dev';
 
 // ─── Derived URLs ─────────────────────────────────────────────────────────────
 const API_BASE_URL    = `${NGROK_URL}/api`;

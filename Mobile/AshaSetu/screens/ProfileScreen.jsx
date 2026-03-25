@@ -16,7 +16,7 @@ import { AuthContext } from '../context/AuthContext';
 import { sendVerificationEmail } from '../api/auth';
 import { getProfilePicture } from '../api/profileImageStorage';
 
-const NGROK_URL = 'https://malachi-inconvertible-lita.ngrok-free.dev';
+const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
 
 const ProfileScreen = ({ navigation, route }) => {
   const { user, token, logout, updateUser } = useContext(AuthContext);

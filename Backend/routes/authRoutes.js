@@ -65,7 +65,7 @@ router.post('/upload-profile-picture', authenticateToken, upload.single('profile
 
     const userId = req.user.user_id;
     // Use the same NGROK_URL that works for all your other endpoints
-    const baseUrl = process.env.BASE_URL || 'https://malachi-inconvertible-lita.ngrok-free.dev';
+    const baseUrl = process.env.BASE_URL || 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
     const publicUrl = `${baseUrl}/uploads/profiles/${req.file.filename}`;
 
     console.log("🔗 Attempting DB Save for URL:", publicUrl);

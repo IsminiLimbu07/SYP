@@ -385,7 +385,7 @@ export const sendVerificationEmail = async (req, res) => {
       WHERE user_id = ${user.user_id}
     `;
 
-    const NGROK_URL = process.env.NGROK_URL || 'https://malachi-inconvertible-lita.ngrok-free.dev';
+    const NGROK_URL = process.env.NGROK_URL || 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
     const verificationUrl = `${NGROK_URL}/api/auth/verify-email?token=${token}&userId=${user.user_id}`;
     
     console.log('✅ Verification URL being sent:', verificationUrl);
