@@ -15,10 +15,6 @@ export const loginUser = async (credentials) => {
       throw new Error(response.message || 'Login failed');
     }
 
-    if (!response.data || !response.data.token || !response.data.user) {
-      throw new Error('Invalid response format from server');
-    }
-
     const { token, user } = response.data;
     const processedUser = {
       ...user,
@@ -38,20 +34,29 @@ export const loginUser = async (credentials) => {
     throw error;
   }
 };
-
 export const registerUser = async (userData) => {
   try {
+    console.log('📤 REGISTER API: Sending registration data:', {
+      full_name: userData.full_name,
+      email: userData.email,
+      phone_number: userData.phone_number,
+      city: userData.city,
+      blood_type: userData.blood_type,
+      password_length: userData.password?.length
+    });
+
     const response = await makeRequest(apiConfig.ENDPOINTS.AUTH.REGISTER, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json', // ✅ ADD THIS
+      },
       body: JSON.stringify(userData),
     });
 
+    console.log('📥 REGISTER API: Response received:', response);
+
     if (!response.success) {
       throw new Error(response.message || 'Registration failed');
-    }
-
-    if (!response.data || !response.data.token || !response.data.user) {
-      throw new Error('Invalid response format from server');
     }
 
     return {
@@ -61,62 +66,7 @@ export const registerUser = async (userData) => {
       user: response.data.user,
     };
   } catch (error) {
-    throw error;
-  }
-};
-
-export const getProfile = async (token) => {
-  try {
-    const response = await makeRequest(apiConfig.ENDPOINTS.AUTH.PROFILE, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.success) {
-      throw new Error(response.message || 'Failed to fetch profile');
-    }
-
-    if (!response.data) {
-      throw new Error('Invalid response format from server');
-    }
-
-    return {
-      success: response.success,
-      message: response.message,
-      user: response.data,
-    };
-  } catch (error) {
-    throw error;
-  }
-};
-
-export const updateProfile = async (token, profileData) => {
-  try {
-    const response = await makeRequest(apiConfig.ENDPOINTS.AUTH.UPDATE_PROFILE, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',  // ✅ ADDED
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(profileData),
-    });
-
-    if (!response.success) {
-      throw new Error(response.message || 'Failed to update profile');
-    }
-
-    if (!response.data) {
-      throw new Error('Invalid response format from server');
-    }
-
-    return {
-      success: response.success,
-      message: response.message,
-      user: response.data,
-    };
-  } catch (error) {
+    console.error('❌ REGISTER API Error:', error);
     throw error;
   }
 };

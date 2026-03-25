@@ -4,7 +4,8 @@ import {
   sendNotification,
   getNotifications,
   deleteNotification,
-  registerExpoToken,
+  markNotificationsRead,
+  getUnreadCount,
 } from '../controllers/notificationController.js';
 import { authenticateToken, isAdmin } from '../middleware/authMiddleware.js';
 
@@ -47,14 +48,13 @@ const withNormalisedTimestamps = (req, res, next) => {
 // GET  /api/notifications          — fetch notifications relevant to this user
 router.get('/', authenticateToken, withNormalisedTimestamps, getNotifications);
 
-// POST /api/notifications/register-token — register Expo push token
-router.post('/register-token', authenticateToken, registerExpoToken);
-
 // ── Admin only ────────────────────────────────────────────────────────────────
 // POST /api/notifications          — send a new notification
 router.post('/', authenticateToken, isAdmin, withNormalisedTimestamps, sendNotification);
 
 // DELETE /api/notifications/:id    — delete a notification
 router.delete('/:id', authenticateToken, isAdmin, deleteNotification);
+router.get('/unread-count', authenticateToken, getUnreadCount);
+router.put('/mark-read', authenticateToken, markNotificationsRead);
 
 export default router;

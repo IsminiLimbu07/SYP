@@ -2,7 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { sql } from './config/db.js';
-
+import path from 'path';
 // Import routes
 import authRoutes from './routes/authRoutes.js';
 import bloodRoutes from './routes/bloodRoutes.js';
@@ -25,7 +25,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ── Serve static files (images, uploads) ─────────────────────────────────────
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use(express.static('public'));
 
 const PORT = process.env.PORT || 9000;
@@ -59,10 +59,12 @@ async function initDB() {
     `;
 
     // ── Table 2: User Profiles ──────────────────────────────────────────────
+    // FIX: user_id is now UNIQUE so that ON CONFLICT (user_id) works correctly
+    //      and city/blood_group are never silently dropped on registration.
     await sql`
       CREATE TABLE IF NOT EXISTS user_profiles (
         profile_id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+        user_id INTEGER UNIQUE REFERENCES users(user_id) ON DELETE CASCADE,
         date_of_birth DATE,
         gender VARCHAR(20),
         profile_picture_url TEXT,
@@ -85,7 +87,19 @@ async function initDB() {
       )
     `;
 
-    // Volunteer status columns
+    // ── Migration: add UNIQUE constraint on user_id if the table already exists
+    //    without it (safe to run repeatedly — ignored if constraint already exists).
+    try {
+      await sql`
+        ALTER TABLE user_profiles
+        ADD CONSTRAINT user_profiles_user_id_unique UNIQUE (user_id)
+      `;
+      console.log('✅ UNIQUE constraint added to user_profiles.user_id');
+    } catch (e) {
+      // Constraint already exists — this is fine, nothing to do
+    }
+
+    // Volunteer status columns (safe to run multiple times)
     await sql`
       ALTER TABLE user_profiles 
       ADD COLUMN IF NOT EXISTS volunteer_status VARCHAR(20) DEFAULT 'none' 
@@ -233,7 +247,11 @@ async function initDB() {
       )
     `;
 
+<<<<<<< HEAD
     // ── Table 10: Campaigns ──────────────────────────────────────────────────
+=======
+    // ── Table 10: Campaigns ─────────────────────────────────────────────────
+>>>>>>> donor-notification
     await sql`
       CREATE TABLE IF NOT EXISTS campaigns (
         campaign_id SERIAL PRIMARY KEY,
@@ -358,3 +376,14 @@ initDB().then(() => {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
 });
+<<<<<<< HEAD
+=======
+// server.js - Place at the bottom
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found on this server.`
+  });
+});
+export default app;
+>>>>>>> donor-notification
