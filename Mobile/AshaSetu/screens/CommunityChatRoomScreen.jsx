@@ -87,7 +87,7 @@ export default function CommunityChatroomScreen({ navigation, route }) {
   // POST <API_BASE>/chat/send
   const sendMessage = async () => {
     const text = messageText.trim();
-    if (!text) return;
+    if (!text || !user) return;
 
     const tempId = `temp_${Date.now()}`;
     const tempMessage = {
@@ -204,11 +204,11 @@ export default function CommunityChatroomScreen({ navigation, route }) {
     return g;
   };
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#8B0000" />
-        <Text style={styles.loadingText}>Loading chatroom…</Text>
+        <Text style={styles.loadingText}>{loading ? 'Loading chatroom…' : 'Loading user data…'}</Text>
       </View>
     );
   }

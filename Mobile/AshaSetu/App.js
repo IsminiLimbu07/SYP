@@ -1,23 +1,12 @@
-import React, { useRef } from 'react';  // ✅ fixed typo
-import { NavigationContainer } from '@react-navigation/native';
-import { ActivityIndicator } from 'react-native';
-import { AuthProvider } from './context/AuthContext';
-import AppNavigator, { linking } from './navigation/AppNavigator';
-import { createNavigationContainerRef } from '@react-navigation/native';
+// Mobile/AshaSetu/App.js
+import React from 'react';
+import RootLayout from './app/_layout';
 
-// ✅ useRef must NOT be called at top level — use createNavigationContainerRef instead
-export const navigationRef = createNavigationContainerRef();
-
-export default function App() {
-  return (
-    <AuthProvider>
-      <NavigationContainer
-        ref={navigationRef}
-        linking={linking}
-        fallback={<ActivityIndicator color="#8B0000" />}
-      >
-        <AppNavigator />
-      </NavigationContainer>
-    </AuthProvider>
-  );
+function App() {
+  return <RootLayout />;
 }
+
+export default App;
+// 3. On Expo Go: Token registration works but real pushes won't arrive
+// 4. On built APK: Full push notification support
+// ===========================================================================================

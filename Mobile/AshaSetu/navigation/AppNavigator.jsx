@@ -48,6 +48,7 @@ import AdminDashboard           from '../screens/admin/AdminDashboard';
 import SendNotificationScreen   from '../screens/admin/SendNotificationScreen';
 import ManageVolunteersScreen   from '../screens/admin/ManageVolunteersScreen';
 import ManageCampaignsScreen    from '../screens/admin/ManageCampaignsScreen';
+import ManageEventsScreen       from '../screens/admin/ManageEventScreen';
 
 // ── Deep-link config ──────────────────────────────────────────────────────────
 export const linking = {
@@ -90,17 +91,28 @@ const CommunityChatHeader = ({ route, navigation, messageCount, memberCount }) =
 const AppNavigator = () => {
   const { user, loading, isAdmin } = useContext(AuthContext);
 
+  console.log('🚀 AppNavigator render:', { loading, user: !!user, isAdmin });
+
   if (loading) {
+    console.log('🚀 AppNavigator: Showing loading screen');
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' }}>
         <ActivityIndicator size="large" color="#8B0000" />
+        <Text style={{ marginTop: 10, color: '#666' }}>Loading...</Text>
       </View>
     );
   }
 
+  console.log('🚀 AppNavigator: Rendering navigator for user state:', user ? 'authenticated' : 'unauthenticated');
+
   return (
     <Stack.Navigator
+      key={user ? 'authenticated' : 'unauthenticated'}
       initialRouteName={user ? (isAdmin ? 'AdminDashboard' : 'Home') : 'Login'}
+      screenOptions={{
+        // Ensure screens don't render until user state is determined
+        unmountOnBlur: true,
+      }}
     >
       {/* ════════════════════════════════════════════════════════════════════════════ */}
       {/* UNAUTHENTICATED SCREENS (No user logged in) */}
@@ -123,6 +135,7 @@ const AppNavigator = () => {
           <Stack.Screen name="SendNotification"  component={SendNotificationScreen}  options={{ title: 'Send Notification',   ...darkRedHeader }} />
           <Stack.Screen name="ManageVolunteers"  component={ManageVolunteersScreen}  options={{ title: 'Manage Volunteers',   ...darkRedHeader }} />
           <Stack.Screen name="ManageCampaigns"   component={ManageCampaignsScreen}   options={{ title: 'Manage Campaigns',    ...darkRedHeader }} />
+          <Stack.Screen name="ManageEvents"      component={ManageEventsScreen}      options={{ title: 'Manage Events',       ...darkRedHeader }} />
         </>
       ) : (
         // ════════════════════════════════════════════════════════════════════════════

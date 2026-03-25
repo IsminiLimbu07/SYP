@@ -43,6 +43,8 @@ export const apiConfig = {
       REGISTER:         (id) => `${API_BASE_URL}/community/events/${id}/register`,
       BECOME_VOLUNTEER: `${API_BASE_URL}/community/become-volunteer`,
       MY_STATUS:        `${API_BASE_URL}/community/my-status`,
+      UPDATE_EVENT:     (id) => `${API_BASE_URL}/community/events/${id}`,
+      DELETE_EVENT:     (id) => `${API_BASE_URL}/community/events/${id}`,
     },
 
     CHAT: {
@@ -82,7 +84,7 @@ export const apiConfig = {
       VOLUNTEER_REJECT:   (userId) => `${API_BASE_URL}/admin/volunteers/${userId}/reject`,
       VOLUNTEER_REVOKE:   (userId) => `${API_BASE_URL}/admin/volunteers/${userId}/revoke`,
 
-      // Campaigns  ← NEW
+      // Campaigns
       CAMPAIGNS_PENDING: `${API_BASE_URL}/campaigns/admin/pending`,
       CAMPAIGNS_ALL:     `${API_BASE_URL}/campaigns/admin/all`,
       CAMPAIGN_APPROVE:  (id) => `${API_BASE_URL}/campaigns/admin/${id}/approve`,

@@ -15,6 +15,10 @@ export const loginUser = async (credentials) => {
       throw new Error(response.message || 'Login failed');
     }
 
+    if (!response.data || !response.data.token || !response.data.user) {
+      throw new Error('Invalid response format from server');
+    }
+
     const { token, user } = response.data;
     const processedUser = {
       ...user,
@@ -46,6 +50,10 @@ export const registerUser = async (userData) => {
       throw new Error(response.message || 'Registration failed');
     }
 
+    if (!response.data || !response.data.token || !response.data.user) {
+      throw new Error('Invalid response format from server');
+    }
+
     return {
       success: response.success,
       message: response.message,
@@ -70,10 +78,14 @@ export const getProfile = async (token) => {
       throw new Error(response.message || 'Failed to fetch profile');
     }
 
+    if (!response.data) {
+      throw new Error('Invalid response format from server');
+    }
+
     return {
       success: response.success,
       message: response.message,
-      user: response.data.user,
+      user: response.data,
     };
   } catch (error) {
     throw error;
@@ -95,10 +107,14 @@ export const updateProfile = async (token, profileData) => {
       throw new Error(response.message || 'Failed to update profile');
     }
 
+    if (!response.data) {
+      throw new Error('Invalid response format from server');
+    }
+
     return {
       success: response.success,
       message: response.message,
-      user: response.data.user,
+      user: response.data,
     };
   } catch (error) {
     throw error;

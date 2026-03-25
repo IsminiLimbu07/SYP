@@ -485,7 +485,19 @@ export const refreshToken = async (req, res) => {
 
     const token = signToken(users[0]);
 
-    res.status(200).json({ success: true, message: 'Token refreshed successfully', token });
+    // Get user profile for complete user data
+    const profile = await sql`
+      SELECT * FROM user_profiles WHERE user_id = ${userId}
+    `;
+
+    res.status(200).json({
+      success: true,
+      message: 'Token refreshed successfully',
+      data: {
+        token,
+        user: { ...users[0], profile: profile[0] || null },
+      },
+    });
   } catch (error) {
     console.error('Error refreshing token:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });

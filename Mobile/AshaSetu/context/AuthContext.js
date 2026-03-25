@@ -38,12 +38,23 @@ export const AuthProvider = ({ children }) => {
           setToken(savedToken);
           setUser(parsedUser);
           setIsAuthenticated(true);
+        } else {
+          console.log('🔍 AuthContext: No saved session found');
+          setUser(null);
+          setToken(null);
+          setIsAuthenticated(false);
         }
       } catch (e) {
-        console.error('Failed to restore token:', e);
+        console.error('❌ AuthContext: Failed to restore session:', e);
+        // Clear potentially corrupted data
+        await AsyncStorage.removeItem('userToken');
+        await AsyncStorage.removeItem('userData');
+        setUser(null);
+        setToken(null);
+        setIsAuthenticated(false);
       } finally {
         setLoading(false);
-        console.log('🔍 AuthContext: Loading complete');
+        console.log('🔍 AuthContext: Loading complete, user:', !!user);
       }
     };
     bootstrapAsync();
@@ -131,6 +142,10 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        if (!data.data || !data.data.token || !data.data.user) {
+          console.error('Invalid refresh token response format:', data);
+          return false;
+        }
         // Persist the new token and updated user object
         await AsyncStorage.setItem('userToken', data.data.token);
         await AsyncStorage.setItem('userData', JSON.stringify(data.data.user));

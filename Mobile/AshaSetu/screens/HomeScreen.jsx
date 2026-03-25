@@ -18,6 +18,17 @@ import { Animated } from 'react-native';
 
 const HomeScreen = ({ navigation }) => {
   const { user, token } = useContext(AuthContext);
+
+  // Safety check - should not happen if navigation is set up correctly
+  if (!user || !token) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' }}>
+        <ActivityIndicator size="large" color="#8B0000" />
+        <Text style={{ marginTop: 10, color: '#666' }}>Loading...</Text>
+      </View>
+    );
+  }
+
   const insets = useSafeAreaInsets();
   const [bloodRequests, setBloodRequests] = useState([]);
   const [loading, setLoading]             = useState(true);

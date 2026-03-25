@@ -16,7 +16,18 @@ import { sendVerificationEmail } from '../api/auth';
 const NGROK_URL = 'https://malachi-inconvertible-lita.ngrok-free.dev';
 
 const ProfileScreen = ({ navigation, route }) => {
-  const { user, token, logout, updateUser } = useContext(AuthContext); // ← single clean destructure
+  const { user, token, logout, updateUser } = useContext(AuthContext);
+
+  // Safety check
+  if (!user) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' }}>
+        <ActivityIndicator size="large" color="#8B0000" />
+        <Text style={{ marginTop: 10, color: '#666' }}>Loading...</Text>
+      </View>
+    );
+  }
+
   const profile = route.params?.donor || user;
   const isOwnProfile = !route.params?.donor;
 
