@@ -1,7 +1,8 @@
 // Mobile/AshaSetu/navigation/AppNavigator.jsx
 import React, { useContext } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, Text, TouchableOpacity } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 
 // ── Auth Screens ──────────────────────────────────────────────────────────────
@@ -65,6 +66,26 @@ const darkRedHeader = {
   headerTintColor:  '#fff',
   headerTitleStyle: { fontWeight: 'bold' },
 };
+
+// ── Custom Header Component for CommunityChatroom ──
+const CommunityChatHeader = ({ route, navigation, messageCount, memberCount }) => (
+  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12 }}>
+    {/* Title + Subtitle */}
+    <View style={{ flex: 1 }}>
+      <Text style={{ fontSize: 18, fontWeight: '700', color: '#fff' }}>
+        {route?.params?.title || 'Community Chat'}
+      </Text>
+      <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
+        {messageCount} messages · {memberCount} member{memberCount !== 1 ? 's' : ''}
+      </Text>
+    </View>
+
+    {/* Members Icon */}
+    <TouchableOpacity style={{ padding: 8 }}>
+      <MaterialCommunityIcons name="account-group" size={22} color="rgba(255,255,255,0.8)" />
+    </TouchableOpacity>
+  </View>
+);
 
 const AppNavigator = () => {
   const { user, loading, isAdmin } = useContext(AuthContext);
@@ -136,9 +157,9 @@ const AppNavigator = () => {
             options={{ title: 'Find Donors', ...darkRedHeader }} 
           />
           
-          <Stack.Screen name="RespondToRequest"   component={RespondToRequestScreen}  options={{ headerShown: false }} />
-          <Stack.Screen name="ManageResponses"    component={ManageResponseScreen}    options={{ headerShown: false }} />
-          <Stack.Screen name="MyDonationResponses"component={MyDonationResponseScreen}options={{ headerShown: false }} />
+          <Stack.Screen name="RespondToRequest"   component={RespondToRequestScreen}  options={{ title: 'Respond to request', ...darkRedHeader}} />
+          <Stack.Screen name="ManageResponses"    component={ManageResponseScreen}    options={{ title: 'Manage Responses', ...darkRedHeader }} />
+          <Stack.Screen name="MyDonationResponses"component={MyDonationResponseScreen}options={{ title: 'My Donation Offers', ...darkRedHeader }} />
           <Stack.Screen name="Ambulance"          component={AmbulanceScreen}         options={{ title: 'Ambulance Services', ...darkRedHeader }} />
           <Stack.Screen name="FirstAid"           component={FirstAidScreen}          options={{ title: 'First Aid',          ...darkRedHeader }} />
 
@@ -149,7 +170,20 @@ const AppNavigator = () => {
 
           {/* ── Community ── */}
           <Stack.Screen name="Community"        component={CommunityHomeScreen}     options={{ title: 'Community',    ...darkRedHeader }} />
-          <Stack.Screen name="CommunityChatroom"component={CommunityChatroomScreen} options={{ headerShown: false }} />
+          <Stack.Screen 
+            name="CommunityChatroom"
+            component={CommunityChatroomScreen} 
+            options={({ route }) => ({
+              headerTitle: '',
+              ...darkRedHeader,
+              headerRight: () => {
+                // ⚠️ Note: To pass dynamic data (message count, member count) to this header,
+                // you'll need to lift state or use useEffect in CommunityChatRoomScreen
+                // to trigger navigation.setOptions() with updated params
+                return null; // Custom header is handled via route params
+              },
+            })}
+          />
           <Stack.Screen name="CreateEvent"      component={CreateEventScreen}       options={{ title: 'Create Event', ...darkRedHeader }} />
           <Stack.Screen name="EventDetails"     component={EventDetailsScreen}      options={{ title: 'Event Details',...darkRedHeader }} />
 

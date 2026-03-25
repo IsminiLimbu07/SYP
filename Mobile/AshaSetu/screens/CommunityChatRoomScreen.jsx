@@ -42,6 +42,28 @@ export default function CommunityChatroomScreen({ navigation, route }) {
     };
   }, []);
 
+  // ── Update header when messages/members change ──
+  useEffect(() => {
+    const uniqueSenders = new Set(messages.map((m) => m.sender_id)).size;
+    navigation.setOptions({
+      headerTitle: () => (
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#fff' }}>
+            {roomTitle}
+          </Text>
+          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
+            {messages.length} messages · {uniqueSenders} member{uniqueSenders !== 1 ? 's' : ''}
+          </Text>
+        </View>
+      ),
+      headerRight: () => (
+        <TouchableOpacity style={{ padding: 8 }}>
+          <MaterialCommunityIcons name="account-group" size={22} color="rgba(255,255,255,0.8)" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [messages, roomTitle, navigation]);
+
   // GET <API_BASE>/chat/messages
   const loadMessages = async () => {
     if (sendingRef.current) return; // don't overwrite optimistic messages mid-send
@@ -191,8 +213,7 @@ export default function CommunityChatroomScreen({ navigation, route }) {
     );
   }
 
-  const grouped       = groupByDate();
-  const uniqueSenders = new Set(messages.map((m) => m.sender_id)).size;
+  const grouped = groupByDate();
 
   return (
     <KeyboardAvoidingView
@@ -202,22 +223,6 @@ export default function CommunityChatroomScreen({ navigation, route }) {
     >
     <SafeAreaView style={styles.safeArea}>
 
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{roomTitle}</Text>
-          <Text style={styles.headerSubtitle}>
-            {messages.length} messages · {uniqueSenders} member{uniqueSenders !== 1 ? 's' : ''}
-          </Text>
-        </View>
-        <View style={styles.headerRight}>
-          <MaterialCommunityIcons name="account-group" size={22} color="rgba(255,255,255,0.8)" />
-        </View>
-      </View>
-
       {/* ── Info Banner ── */}
       <View style={styles.infoBanner}>
         <MaterialCommunityIcons name="information" size={16} color="#8B0000" />
@@ -226,34 +231,34 @@ export default function CommunityChatroomScreen({ navigation, route }) {
         </Text>
       </View>
 
+      {/* ── Messages Area ── */}
       <View style={styles.keyboardView}>
-        {/* ── Messages ── */}
         <ScrollView
           ref={scrollViewRef}
           style={styles.messagesContainer}
-          contentContainerStyle={styles.messagesContent}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          contentContainerStyle={messages.length === 0 ? styles.emptyContainer : styles.messagesContent}
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
         >
-          {Object.keys(grouped).length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="chat-outline" size={64} color="#DDD" />
+          {messages.length === 0 ? (
+            <View style={{ alignItems: 'center' }}>
+              <MaterialCommunityIcons name="chat-outline" size={48} color="#CCC" />
               <Text style={styles.emptyText}>No messages yet</Text>
-              <Text style={styles.emptySubtext}>Be the first to start a conversation!</Text>
+              <Text style={styles.emptySubtext}>Be the first to break the ice! 💬</Text>
             </View>
           ) : (
-            Object.keys(grouped).map((dateKey) => (
-              <View key={dateKey}>
+            Object.entries(grouped).map(([date, msgs]) => (
+              <View key={date}>
                 {/* Date Divider */}
                 <View style={styles.dateDivider}>
                   <View style={styles.dateLine} />
-                  <Text style={styles.dateDividerText}>{formatDate(new Date(dateKey))}</Text>
+                  <Text style={styles.dateDividerText}>{formatDate(msgs[0].created_at)}</Text>
                   <View style={styles.dateLine} />
                 </View>
 
-                {grouped[dateKey].map((message, index) => {
-                  const isOwn      = message.sender_id === user.user_id;
-                  const prevMsg    = grouped[dateKey][index - 1];
+                {/* Messages for this date */}
+                {msgs.map((message, idx) => {
+                  const prevMsg = idx > 0 ? msgs[idx - 1] : null;
+                  const isOwn = message.sender_id === user.user_id;
                   const showAvatar = !prevMsg || prevMsg.sender_id !== message.sender_id;
 
                   return (
@@ -358,19 +363,6 @@ const styles = StyleSheet.create({
   safeArea:         { flex: 1, backgroundColor: '#F0F0F0' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0F0F0' },
   loadingText:      { marginTop: 10, fontSize: 16, color: '#666' },
-  header: {
-    backgroundColor: '#8B0000',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  backBtn:        { padding: 4 },
-  headerCenter:   { flex: 1 },
-  headerTitle:    { fontSize: 18, fontWeight: '700', color: '#fff' },
-  headerSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
-  headerRight:    { padding: 4 },
   infoBanner: {
     backgroundColor: '#FFF9E5',
     flexDirection: 'row',

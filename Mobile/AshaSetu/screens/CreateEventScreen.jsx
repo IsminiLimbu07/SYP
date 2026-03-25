@@ -594,6 +594,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   createButtonDisabled: {
+    
     backgroundColor: '#CCC',
   },
   createButtonText: {
