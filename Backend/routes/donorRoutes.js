@@ -4,69 +4,65 @@ import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// GET /api/donors
-// Optional filters: ?blood=A+  or  ?city=Dharan
+// GET /api/donors?blood=A+&city=Janakpur&search=name
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { blood, city } = req.query;
+    const { blood, city, search } = req.query;
+    const term = (city || search || '').toLowerCase().trim();
 
-    // We JOIN users + user_profiles to get all the info we need
-    // We only return users who are willing to donate blood
-    let donors;
+    const donors = await sql`
+      SELECT
+        u.user_id,
+        u.full_name,
+        u.phone_number,
+        p.blood_group,
+        p.city,
+        p.profile_picture_url,
+        p.willing_to_donate_blood,
+        p.available_to_donate
+      FROM users u
+      LEFT JOIN user_profiles p ON u.user_id = p.user_id
+      WHERE u.is_active = true
+        AND (
+          ${blood ? sql`p.blood_group = ${blood}` : sql`true`}
+        )
+        AND (
+          ${term ? sql`(
+            LOWER(COALESCE(p.city, '')) LIKE ${'%' + term + '%'}
+            OR LOWER(u.full_name) LIKE ${'%' + term + '%'}
+          )` : sql`true`}
+        )
+      ORDER BY u.created_at DESC
+    `;
 
-   if (blood && city) {
-  donors = await sql`
-    SELECT u.user_id, u.full_name, u.phone_number,
-      p.blood_group, p.city, p.profile_picture_url
-    FROM users u
-    LEFT JOIN user_profiles p ON u.user_id = p.user_id
-    WHERE p.blood_group = ${blood}
-    AND LOWER(p.city) LIKE ${'%' + city.toLowerCase() + '%'}
-  `;
-} else if (blood) {
-  donors = await sql`
-    SELECT u.user_id, u.full_name, u.phone_number,
-      p.blood_group, p.city, p.profile_picture_url
-    FROM users u
-    LEFT JOIN user_profiles p ON u.user_id = p.user_id
-    WHERE p.blood_group = ${blood}
-  `;
-} else if (city) {
-  donors = await sql`
-    SELECT u.user_id, u.full_name, u.phone_number,
-      p.blood_group, p.city, p.profile_picture_url
-    FROM users u
-    LEFT JOIN user_profiles p ON u.user_id = p.user_id
-    WHERE LOWER(p.city) LIKE ${'%' + city.toLowerCase() + '%'}
-  `;
-} else {
-  donors = await sql`
-    SELECT u.user_id, u.full_name, u.phone_number,
-      p.blood_group, p.city, p.profile_picture_url
-    FROM users u
-    LEFT JOIN user_profiles p ON u.user_id = p.user_id
-  `;
-}
     return res.status(200).json({ success: true, data: donors });
   } catch (error) {
     console.error('Error fetching donors:', error);
     return res.status(500).json({ success: false, message: 'Failed to fetch donors' });
   }
 });
-// in donorRoutes.js
+
+// GET /api/donors/:id
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await sql`
-      SELECT u.user_id, u.full_name, u.phone_number, u.email,
-        p.blood_group, p.city, p.profile_picture_url
+      SELECT
+        u.user_id, u.full_name, u.phone_number, u.email,
+        p.blood_group,
+        p.city,
+        p.profile_picture_url,
+        p.willing_to_donate_blood,
+        p.available_to_donate
       FROM users u
       LEFT JOIN user_profiles p ON u.user_id = p.user_id
       WHERE u.user_id = ${id}
     `;
-    if (result.length === 0) return res.status(404).json({ success: false, message: 'User not found' });
+    if (result.length === 0)
+      return res.status(404).json({ success: false, message: 'User not found' });
     return res.status(200).json({ success: true, data: result[0] });
   } catch (error) {
+    console.error('Error fetching donor by id:', error);
     return res.status(500).json({ success: false, message: 'Failed to fetch user' });
   }
 });

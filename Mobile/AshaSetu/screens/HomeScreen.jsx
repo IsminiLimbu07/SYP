@@ -16,12 +16,15 @@ import { apiConfig } from '../config/api';
 import { Animated } from 'react-native';
 
 const HomeScreen = ({ navigation }) => {
-  const { user, token } = useContext(AuthContext);
+  // ── Pull unreadCount + fetchUnreadCount from AuthContext ──────────────────
+  // No more local unreadCount state — the single source of truth lives in context
+  // so the badge stays in sync with NotificationsScreen automatically.
+  const { user, token, unreadCount, fetchUnreadCount } = useContext(AuthContext);
+
   const [bloodRequests, setBloodRequests] = useState([]);
   const [loading, setLoading]             = useState(true);
   const [nearbyEvents, setNearbyEvents]   = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
   const [fadeAnim] = useState(new Animated.Value(1));
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -95,12 +98,12 @@ const HomeScreen = ({ navigation }) => {
     if (!token) return;
     fetchBloodRequests();
     fetchNearbyEvents();
-    fetchUnreadCount();
+    fetchUnreadCount(); // ← use context version — syncs the shared badge
 
     const unsubscribe = navigation.addListener('focus', () => {
       fetchBloodRequests();
       fetchNearbyEvents();
-      fetchUnreadCount();
+      fetchUnreadCount(); // ← re-sync badge every time HomeScreen comes into focus
     });
     return unsubscribe;
   }, [navigation, token]);
@@ -169,21 +172,6 @@ const HomeScreen = ({ navigation }) => {
     };
   }, [rotateSafetyTip]);
 
-  // ── Notification unread count ───────────────────────────────────────────────
-  const fetchUnreadCount = async () => {
-    try {
-      const response = await fetch(`${apiConfig.BASE_URL}/notifications`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-      if (data.success) {
-        setUnreadCount(data.data?.length || 0);
-      }
-    } catch {
-      // silent fail — badge simply stays at 0
-    }
-  };
-
   // ── Nearby events ───────────────────────────────────────────────────────────
   const getFullImageUrl = (url) => {
     if (!url) return null;
@@ -191,7 +179,6 @@ const HomeScreen = ({ navigation }) => {
     const base = apiConfig.BASE_URL.replace(/\/api\/?$/, '');
     return url.startsWith('/') ? `${base}${url}` : `${base}/${url}`;
   };
-
 
   const fetchNearbyEvents = async () => {
     try {
@@ -242,7 +229,7 @@ const HomeScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.headerActions}>
-            {/* 🔔 Notification Bell */}
+            {/* 🔔 Notification Bell — badge driven by AuthContext.unreadCount */}
             <TouchableOpacity
               style={styles.iconButton}
               onPress={() => navigation.navigate('Notifications')}
@@ -505,7 +492,6 @@ const HomeScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.tipsCard}>
-            {/* Card Header */}
             <View style={styles.tipsHeader}>
               <View style={styles.tipsIconWrap}>
                 <MaterialCommunityIcons name="lightbulb-on" size={18} color="#FF9800" />
@@ -515,7 +501,6 @@ const HomeScreen = ({ navigation }) => {
               </Text>
             </View>
 
-            {/* Tip Text */}
             <Animated.View
               style={[
                 styles.tipContent,
@@ -528,7 +513,6 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.tipText}>{safetyTips[currentTipIndex]}</Text>
             </Animated.View>
 
-            {/* Progress bar only — no dots */}
             <View style={styles.tipProgressBar}>
               <View
                 style={[
@@ -570,7 +554,6 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   centered: { justifyContent: 'center', alignItems: 'center' },
 
-  // Header
   header: {
     backgroundColor: '#8B0000',
     flexDirection: 'row',
@@ -587,7 +570,6 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 16, color: '#fff', opacity: 0.8 },
   userName: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginTop: 5 },
 
-  // Icon buttons in header
   iconButton: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -600,7 +582,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,215,0,0.15)',
   },
 
-  // Notification badge
   badge: {
     position: 'absolute', top: -4, right: -4,
     backgroundColor: '#ff3b30',
@@ -611,7 +592,6 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
 
-  // Profile button
   profileButton: {},
   avatarSmall: {
     width: 44, height: 44, borderRadius: 22,
@@ -621,7 +601,6 @@ const styles = StyleSheet.create({
   },
   avatarTextSmall: { fontSize: 18, fontWeight: 'bold', color: '#8B0000' },
 
-  // Emergency card
   emergencyCard: {
     backgroundColor: '#8B0000',
     marginHorizontal: 20, marginVertical: 15,
@@ -665,7 +644,6 @@ const styles = StyleSheet.create({
   respondButtonText: { color: '#8B0000', fontSize: 15, fontWeight: 'bold', letterSpacing: 0.3 },
   noRequestText: { fontSize: 14, color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: 8 },
 
-  // Action grid
   actionGrid: {
     flexDirection: 'row', flexWrap: 'wrap',
     paddingHorizontal: 20, justifyContent: 'space-between',
@@ -681,13 +659,11 @@ const styles = StyleSheet.create({
   },
   actionLabel: { fontSize: 14, color: '#333', fontWeight: '500', textAlign: 'center' },
 
-  // Section
   section: { paddingHorizontal: 20, marginBottom: 25 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   sectionTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
   seeAll: { fontSize: 14, color: '#8B0000', fontWeight: '500' },
 
-  // Events
   loadingEventsContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 10 },
   loadingEventsText: { fontSize: 14, color: '#666' },
   eventCard: {
@@ -711,7 +687,6 @@ const styles = StyleSheet.create({
   noEventsText: { fontSize: 16, color: '#999', marginTop: 12, marginBottom: 8 },
   browseEventsText: { fontSize: 14, color: '#8B0000', fontWeight: '600' },
 
-  // Activity
   activityItem: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', paddingVertical: 12,
@@ -723,7 +698,6 @@ const styles = StyleSheet.create({
   activityTime: { fontSize: 12, color: '#999' },
   activityArrow: { fontSize: 18, color: '#8B0000', marginLeft: 10 },
 
-  // Tips Card
   tipsCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -785,7 +759,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
 
-  // Bottom nav
   bottomNav: {
     flexDirection: 'row', backgroundColor: '#F2F2F2',
     paddingVertical: 8, paddingHorizontal: 20,

@@ -21,8 +21,17 @@ const signToken = (user) => {
 // Register new user
 export const register = async (req, res) => {
   try {
-    const { full_name, email, phone_number, password } = req.body;
+    const { full_name, email, phone_number, password, city, blood_type } = req.body;
 
+    console.log('📝 Registration attempt:', { 
+      full_name, 
+      email, 
+      phone_number, 
+      city, 
+      blood_type 
+    });
+
+    // Validation
     if (!full_name || !email || !phone_number || !password) {
       return res.status(400).json({ success: false, message: 'All fields are required' });
     }
@@ -47,6 +56,7 @@ export const register = async (req, res) => {
       });
     }
 
+    // Check existing user
     const existingUser = await sql`
       SELECT * FROM users WHERE email = ${email} OR phone_number = ${phone_number}
     `;
@@ -56,33 +66,73 @@ export const register = async (req, res) => {
         message: 'User with this email or phone already exists',
       });
     }
+    
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(password, salt);
 
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
-        const password_hash = await bcrypt.hash(password, salt);
-
+    // Insert user
     const newUser = await sql`
       INSERT INTO users (full_name, email, phone_number, password_hash)
       VALUES (${full_name}, ${email}, ${phone_number}, ${password_hash})
       RETURNING user_id, full_name, email, phone_number, is_admin, created_at
     `;
 
-    await sql`INSERT INTO user_profiles (user_id) VALUES (${newUser[0].user_id})`;
+    console.log('✅ User created with ID:', newUser[0].user_id);
+
+    // ── FIX: Check if a profile row already exists (e.g. created by a DB trigger),
+    //         then UPDATE it with city/blood_type — otherwise INSERT a fresh row.
+    //         This replaces the ON CONFLICT upsert which requires a UNIQUE constraint
+    //         on user_id that may not exist, causing city/blood_type to be silently dropped.
+    const existingProfile = await sql`
+      SELECT user_id FROM user_profiles WHERE user_id = ${newUser[0].user_id}
+    `;
+
+    let profile;
+    if (existingProfile.length > 0) {
+      // Row already exists (trigger created it) — just update the fields
+      profile = await sql`
+        UPDATE user_profiles
+        SET
+          city        = ${city || null},
+          blood_group = ${blood_type || null}
+        WHERE user_id = ${newUser[0].user_id}
+        RETURNING user_id, city, blood_group, profile_picture_url, willing_to_donate_blood
+      `;
+    } else {
+      // No row yet — insert fresh
+      profile = await sql`
+        INSERT INTO user_profiles (user_id, city, blood_group)
+        VALUES (${newUser[0].user_id}, ${city || null}, ${blood_type || null})
+        RETURNING user_id, city, blood_group, profile_picture_url, willing_to_donate_blood
+      `;
+    }
+
+    console.log('✅ Profile saved:', profile[0]);
+
+    // Combine user and profile data
+    const userWithProfile = {
+      ...newUser[0],
+      profile: profile[0]
+    };
 
     const token = signToken(newUser[0]);
 
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      data: { user: newUser[0], token },
+      data: { 
+        user: userWithProfile,
+        token 
+      },
     });
   } catch (error) {
-    console.error('Error registering user:', error);
+    console.error('❌ Error registering user:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
-// ─── Login ────────────────────────────────────────────────────────────────────
+// Login
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -94,17 +144,17 @@ export const login = async (req, res) => {
       });
     }
 
-        // Find user by email
-        const users = await sql`
-            SELECT * FROM users WHERE email = ${email}
-        `;
+    // Find user by email
+    const users = await sql`
+      SELECT * FROM users WHERE email = ${email}
+    `;
 
-        if (users.length === 0) {
-            return res.status(401).json({ 
-                success: false,
-                message: "Invalid email or password" 
-            });
-        }
+    if (users.length === 0) {
+      return res.status(401).json({ 
+        success: false,
+        message: "Invalid email or password" 
+      });
+    }
 
     const user = users[0];
 
@@ -112,23 +162,23 @@ export const login = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Your account has been deactivated' });
     }
 
-        // Verify password
-        const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
-        if (!isPasswordValid) {
-            return res.status(401).json({ 
-                success: false,
-                message: "Invalid email or password" 
-            });
-        }
+    if (!isPasswordValid) {
+      return res.status(401).json({ 
+        success: false,
+        message: "Invalid email or password" 
+      });
+    }
 
-        // Generate JWT token
-        const token = signToken(user);
+    // Generate JWT token
+    const token = signToken(user);
 
-        // Get user profile
-        const profile = await sql`
-            SELECT * FROM user_profiles WHERE user_id = ${user.user_id}
-        `;
+    // Get user profile
+    const profile = await sql`
+      SELECT * FROM user_profiles WHERE user_id = ${user.user_id}
+    `;
 
     delete user.password_hash;
 
@@ -146,7 +196,7 @@ export const login = async (req, res) => {
   }
 };
 
-// ─── Get current user profile ─────────────────────────────────────────────────
+// Get current user profile
 export const getProfile = async (req, res) => {
   try {
     const users = await sql`
@@ -162,24 +212,24 @@ export const getProfile = async (req, res) => {
       SELECT * FROM user_profiles WHERE user_id = ${req.user.user_id}
     `;
 
-        res.status(200).json({
-            success: true,
-            data: {
-                ...users[0],
-                profile: profile[0] || null
-            }
-        });
+    res.status(200).json({
+      success: true,
+      data: {
+        ...users[0],
+        profile: profile[0] || null
+      }
+    });
 
-    } catch (error) {
-        console.error("Error getting profile:", error);
-        res.status(500).json({ 
-            success: false,
-            message: "Internal server error" 
-        });
-    }
+  } catch (error) {
+    console.error("Error getting profile:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error" 
+    });
+  }
 };
 
-// ─── Update profile ───────────────────────────────────────────────────────────
+// Update profile
 export const updateProfile = async (req, res) => {
   try {
     const {
@@ -190,52 +240,52 @@ export const updateProfile = async (req, res) => {
       medical_conditions, allergies, location_lat, location_lng,
     } = req.body;
 
-        // Update basic user info if provided
-        if (full_name || phone_number) {
-            await sql`
-                UPDATE users 
-                SET 
-                    full_name = COALESCE(${full_name}, full_name),
-                    phone_number = COALESCE(${phone_number}, phone_number),
-                    updated_at = NOW()
-                WHERE user_id = ${req.user.user_id}
-            `;
-        }
+    // Update basic user info if provided
+    if (full_name || phone_number) {
+      await sql`
+        UPDATE users 
+        SET 
+          full_name = COALESCE(${full_name}, full_name),
+          phone_number = COALESCE(${phone_number}, phone_number),
+          updated_at = NOW()
+        WHERE user_id = ${req.user.user_id}
+      `;
+    }
 
-        // Update user profile
-        await sql`
-            UPDATE user_profiles
-            SET 
-                date_of_birth = COALESCE(${date_of_birth}, date_of_birth),
-                gender = COALESCE(${gender}, gender),
-                address = COALESCE(${address}, address),
-                city = COALESCE(${city}, city),
-                blood_group = COALESCE(${blood_group}, blood_group),
-                willing_to_donate_blood = COALESCE(${willing_to_donate_blood}, willing_to_donate_blood),
-                last_donation_date = COALESCE(${last_donation_date}, last_donation_date),
-                available_to_donate = COALESCE(${available_to_donate}, available_to_donate),
-                willing_to_volunteer = COALESCE(${willing_to_volunteer}, willing_to_volunteer),
-                volunteer_skills = COALESCE(${volunteer_skills}, volunteer_skills),
-                volunteer_availability = COALESCE(${volunteer_availability}, volunteer_availability),
-                emergency_contact_name = COALESCE(${emergency_contact_name}, emergency_contact_name),
-                emergency_contact_phone = COALESCE(${emergency_contact_phone}, emergency_contact_phone),
-                medical_conditions = COALESCE(${medical_conditions}, medical_conditions),
-                allergies = COALESCE(${allergies}, allergies),
-                location_lat = COALESCE(${location_lat}, location_lat),
-                location_lng = COALESCE(${location_lng}, location_lng),
-                updated_at = NOW()
-            WHERE user_id = ${req.user.user_id}
-        `;
+    // Update user profile
+    await sql`
+      UPDATE user_profiles
+      SET 
+        date_of_birth = COALESCE(${date_of_birth}, date_of_birth),
+        gender = COALESCE(${gender}, gender),
+        address = COALESCE(${address}, address),
+        city = COALESCE(${city}, city),
+        blood_group = COALESCE(${blood_group}, blood_group),
+        willing_to_donate_blood = COALESCE(${willing_to_donate_blood}, willing_to_donate_blood),
+        last_donation_date = COALESCE(${last_donation_date}, last_donation_date),
+        available_to_donate = COALESCE(${available_to_donate}, available_to_donate),
+        willing_to_volunteer = COALESCE(${willing_to_volunteer}, willing_to_volunteer),
+        volunteer_skills = COALESCE(${volunteer_skills}, volunteer_skills),
+        volunteer_availability = COALESCE(${volunteer_availability}, volunteer_availability),
+        emergency_contact_name = COALESCE(${emergency_contact_name}, emergency_contact_name),
+        emergency_contact_phone = COALESCE(${emergency_contact_phone}, emergency_contact_phone),
+        medical_conditions = COALESCE(${medical_conditions}, medical_conditions),
+        allergies = COALESCE(${allergies}, allergies),
+        location_lat = COALESCE(${location_lat}, location_lat),
+        location_lng = COALESCE(${location_lng}, location_lng),
+        updated_at = NOW()
+      WHERE user_id = ${req.user.user_id}
+    `;
 
-        // Get updated profile
-        const updatedUser = await sql`
-            SELECT user_id, full_name, email, phone_number, is_admin, created_at
-            FROM users WHERE user_id = ${req.user.user_id}
-        `;
+    // Get updated profile
+    const updatedUser = await sql`
+      SELECT user_id, full_name, email, phone_number, is_admin, created_at
+      FROM users WHERE user_id = ${req.user.user_id}
+    `;
 
-        const updatedProfile = await sql`
-            SELECT * FROM user_profiles WHERE user_id = ${req.user.user_id}
-        `;
+    const updatedProfile = await sql`
+      SELECT * FROM user_profiles WHERE user_id = ${req.user.user_id}
+    `;
 
     res.status(200).json({
       success: true,
@@ -250,63 +300,64 @@ export const updateProfile = async (req, res) => {
 
 // Change password
 export const changePassword = async (req, res) => {
-    try {
-        const { current_password, new_password } = req.body;
+  try {
+    const { current_password, new_password } = req.body;
 
-        if (!current_password || !new_password) {
-            return res.status(400).json({ 
-                success: false,
-                message: "Current password and new password are required" 
-            });
-        }
-
-        if (new_password.length < 6) {
-            return res.status(400).json({ 
-                success: false,
-                message: "New password must be at least 6 characters" 
-            });
-        }
-
-        // Get user
-        const users = await sql`
-            SELECT * FROM users WHERE user_id = ${req.user.user_id}
-        `;
-
-        // Verify current password
-        const isPasswordValid = await bcrypt.compare(current_password, users[0].password_hash);
-
-        if (!isPasswordValid) {
-            return res.status(401).json({ 
-                success: false,
-                message: "Current password is incorrect" 
-            });
-        }
-
-        // Hash new password
-        const salt = await bcrypt.genSalt(10);
-        const new_password_hash = await bcrypt.hash(new_password, salt);
-
-        // Update password
-        await sql`
-            UPDATE users 
-            SET password_hash = ${new_password_hash}, updated_at = NOW()
-            WHERE user_id = ${req.user.user_id}
-        `;
-
-        res.status(200).json({
-            success: true,
-            message: "Password changed successfully"
-        });
-
-    } catch (error) {
-        console.error("Error changing password:", error);
-        res.status(500).json({ 
-            success: false,
-            message: "Internal server error" 
-        });
+    if (!current_password || !new_password) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Current password and new password are required" 
+      });
     }
+
+    if (new_password.length < 6) {
+      return res.status(400).json({ 
+        success: false,
+        message: "New password must be at least 6 characters" 
+      });
+    }
+
+    // Get user
+    const users = await sql`
+      SELECT * FROM users WHERE user_id = ${req.user.user_id}
+    `;
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(current_password, users[0].password_hash);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ 
+        success: false,
+        message: "Current password is incorrect" 
+      });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const new_password_hash = await bcrypt.hash(new_password, salt);
+
+    // Update password
+    await sql`
+      UPDATE users 
+      SET password_hash = ${new_password_hash}, updated_at = NOW()
+      WHERE user_id = ${req.user.user_id}
+    `;
+
+    res.status(200).json({
+      success: true,
+      message: "Password changed successfully"
+    });
+
+  } catch (error) {
+    console.error("Error changing password:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error" 
+    });
+  }
 };
-// ─── Send verification email ──────────────────────────────────────────────────
+
+// Send verification email
 export const sendVerificationEmail = async (req, res) => {
   try {
     const users = await sql`
@@ -324,65 +375,60 @@ export const sendVerificationEmail = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email is already verified' });
     }
 
-        // Generate a secure token + 24h expiry
-        const token = crypto.randomBytes(32).toString('hex');
-        const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-        // Save token to DB
-        await sql`
-            UPDATE users
-            SET verification_token = ${token},
-                verification_token_expires = ${expires}
-            WHERE user_id = ${user.user_id}
-        `;
+    await sql`
+      UPDATE users
+      SET verification_token = ${token},
+          verification_token_expires = ${expires}
+      WHERE user_id = ${user.user_id}
+    `;
 
-        // Use ngrok URL for verification link (commented local IP for now)
-        const NGROK_URL = process.env.NGROK_URL || 'https://malachi-inconvertible-lita.ngrok-free.dev';
-        // const BASE_URL = process.env.BASE_URL || 'http://192.168.1.4:9000';
-        const verificationUrl = `${NGROK_URL}/api/auth/verify-email?token=${token}&userId=${user.user_id}`;
-        
-        console.log('✅ Verification URL being sent:', verificationUrl);
+    const NGROK_URL = process.env.NGROK_URL || 'https://malachi-inconvertible-lita.ngrok-free.dev';
+    const verificationUrl = `${NGROK_URL}/api/auth/verify-email?token=${token}&userId=${user.user_id}`;
+    
+    console.log('✅ Verification URL being sent:', verificationUrl);
 
-        // Send email via nodemailer
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
 
-        await transporter.sendMail({
-            from: `"AshaSetu" <${process.env.EMAIL_USER}>`,
-            to: user.email,
-            subject: 'Verify your email — AshaSetu',
-            html: `
-                <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
-                    <div style="background:#8B0000;padding:28px;text-align:center">
-                        <h1 style="color:#fff;margin:0;font-size:22px">Verify Your Email</h1>
-                    </div>
-                    <div style="padding:32px">
-                        <p style="color:#333;font-size:15px">Hi <strong>${user.full_name}</strong>,</p>
-                        <p style="color:#555;font-size:14px;line-height:1.6">
-                            Click the button below to verify your email address. This link expires in <strong>24 hours</strong>.
-                        </p>
-                        <div style="text-align:center;margin:28px 0">
-                            <a href="${verificationUrl}"
-                               style="background:#8B0000;color:#fff;text-decoration:none;padding:13px 32px;border-radius:8px;font-size:15px;font-weight:bold;display:inline-block">
-                                Verify Email
-                            </a>
-                        </div>
-                        <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
-                            Or copy this link:<br>
-                            <span style="color:#0066cc;word-break:break-all">${verificationUrl}</span>
-                        </p>
-                        <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
-                            If you didn't request this, you can safely ignore this email.
-                        </p>
-                    </div>
-                </div>
-            `,
-        });
+    await transporter.sendMail({
+      from: `"AshaSetu" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: 'Verify your email — AshaSetu',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+          <div style="background:#8B0000;padding:28px;text-align:center">
+            <h1 style="color:#fff;margin:0;font-size:22px">Verify Your Email</h1>
+          </div>
+          <div style="padding:32px">
+            <p style="color:#333;font-size:15px">Hi <strong>${user.full_name}</strong>,</p>
+            <p style="color:#555;font-size:14px;line-height:1.6">
+              Click the button below to verify your email address. This link expires in <strong>24 hours</strong>.
+            </p>
+            <div style="text-align:center;margin:28px 0">
+              <a href="${verificationUrl}"
+                 style="background:#8B0000;color:#fff;text-decoration:none;padding:13px 32px;border-radius:8px;font-size:15px;font-weight:bold;display:inline-block">
+                Verify Email
+              </a>
+            </div>
+            <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
+              Or copy this link:<br>
+              <span style="color:#0066cc;word-break:break-all">${verificationUrl}</span>
+            </p>
+            <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
+              If you didn't request this, you can safely ignore this email.
+            </p>
+          </div>
+        </div>
+      `,
+    });
 
     res.status(200).json({ success: true, message: 'Verification email sent successfully' });
   } catch (error) {
@@ -391,7 +437,7 @@ export const sendVerificationEmail = async (req, res) => {
   }
 };
 
-// ─── Verify email via link click ──────────────────────────────────────────────
+// Verify email via link click
 export const verifyEmail = async (req, res) => {
   try {
     const { token, userId } = req.query;
@@ -417,13 +463,13 @@ export const verifyEmail = async (req, res) => {
       return res.send(verifyPage(true, 'Your email is already verified!'));
     }
 
-        await sql`
-            UPDATE users
-            SET is_verified = true,
-                verification_token = NULL,
-                verification_token_expires = NULL
-            WHERE user_id = ${userId}
-        `;
+    await sql`
+      UPDATE users
+      SET is_verified = true,
+          verification_token = NULL,
+          verification_token_expires = NULL
+      WHERE user_id = ${userId}
+    `;
 
     res.send(verifyPage(true, 'Your email has been verified! You can now return to the app.'));
   } catch (error) {
@@ -485,7 +531,7 @@ export const refreshToken = async (req, res) => {
   }
 };
 
-// ─── Forgot Password — generate & email OTP ───────────────────────────────────
+// Forgot Password — generate & email OTP
 export const forgotPassword = async (req, res) => {
   try {
     console.log('🔥 forgotPassword HIT! Email:', req.body.email);
@@ -570,7 +616,7 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
-// ─── Verify OTP ───────────────────────────────────────────────────────────────
+// Verify OTP
 export const verifyResetOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -622,7 +668,7 @@ export const verifyResetOtp = async (req, res) => {
   }
 };
 
-// ─── Reset Password ───────────────────────────────────────────────────────────
+// Reset Password
 export const resetPassword = async (req, res) => {
   try {
     const { email, new_password } = req.body;
@@ -671,6 +717,55 @@ export const resetPassword = async (req, res) => {
     res.status(200).json({ success: true, message: 'Password reset successfully' });
   } catch (error) {
     console.error('Error in resetPassword:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+// Add this to Backend/controllers/authController.js
+
+export const uploadProfilePicture = async (req, res) => {
+  try {
+    // multer puts the file on req.file
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file received' });
+    }
+ 
+    // Build the public URL — BASE_URL must be set in your .env
+    // e.g. BASE_URL=https://malachi-inconvertible-lita.ngrok-free.dev
+    const publicUrl = `${process.env.BASE_URL}/uploads/profiles/${req.file.filename}`;
+ 
+    // Update user_profiles using your existing `sql` tag (postgres)
+    await sql`
+      UPDATE user_profiles
+      SET profile_picture_url = ${publicUrl},
+          updated_at           = NOW()
+      WHERE user_id = ${req.user.user_id}
+    `;
+ 
+    // Return the URL so the frontend can update context immediately
+    return res.status(200).json({
+      success: true,
+      data: { profile_picture_url: publicUrl },
+    });
+  } catch (err) {
+    console.error('❌ Upload error:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+export const savePushToken = async (req, res) => {
+  try {
+    const { push_token } = req.body;
+    if (!push_token)
+      return res.status(400).json({ success: false, message: 'push_token is required' });
+
+    await sql`
+      UPDATE user_profiles
+      SET push_token = ${push_token}
+      WHERE user_id = ${req.user.user_id}
+    `;
+
+    res.json({ success: true, message: 'Push token saved' });
+  } catch (error) {
+    console.error('Error saving push token:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

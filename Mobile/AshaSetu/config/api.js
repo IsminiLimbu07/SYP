@@ -1,7 +1,8 @@
 // ─── IMPORTANT: Update this URL every time you restart ngrok ─────────────────
 // Run: ngrok http 9000
 // Then copy the https URL it gives you and paste it below
-const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
+//const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
+const NGROK_URL ='https://malachi-inconvertible-lita.ngrok-free.dev';
 
 // ─── Derived URLs ─────────────────────────────────────────────────────────────
 const API_BASE_URL    = `${NGROK_URL}/api`;
@@ -21,6 +22,7 @@ export const apiConfig = {
       CHANGE_PASSWORD:         `${API_BASE_URL}/auth/change-password`,
       SEND_VERIFICATION_EMAIL: `${API_BASE_URL}/auth/send-verification-email`,
       REFRESH_TOKEN:           `${API_BASE_URL}/auth/refresh-token`,
+       UPLOAD_PROFILE_PICTURE: `${NGROK_URL}/api/auth/upload-profile-picture`,
     },
 
     BLOOD: {
@@ -93,62 +95,39 @@ export const apiConfig = {
   },
 };
 
-export const makeRequest = async (url, options = {}) => {
+// config/api.js
+export const makeRequest = async (endpoint, options = {}) => {
   try {
-    if (!url) {
-      throw new Error('API URL is undefined. Check that the endpoint is defined in apiConfig.ENDPOINTS');
-    }
-
-    console.log('📄 API Request:', { url, method: options.method || 'GET', timestamp: new Date().toISOString() });
-
-    const controller = new AbortController();
-    const timeoutId  = setTimeout(() => controller.abort(), 15000);
-
-    const { headers: customHeaders, ...restOptions } = options;
-
+    const url = endpoint.startsWith('http') ? endpoint : `${apiConfig.BASE_URL}${endpoint}`;
+    
+    // Log the request
+    console.log('🔗 API Request:', {
+      url,
+      method: options.method,
+      headers: options.headers,
+      body: options.body ? JSON.parse(options.body) : null
+    });
+    
     const response = await fetch(url, {
-      ...restOptions,
-      signal: controller.signal,
+      ...options,
       headers: {
         'Content-Type': 'application/json',
-        ...customHeaders,
+        ...options.headers,
       },
     });
-
-    clearTimeout(timeoutId);
-
-    console.log('📊 API Response Status:', response.status);
-
-    let data;
-    try {
-      data = await response.json();
-    } catch (parseError) {
-      const text = await response.text();
-      console.warn('⚠️ Failed to parse JSON, got text:', text.slice(0, 200));
-      data = { success: false, message: text || parseError.message };
-    }
-
-    console.log('✅ API Response Data:', data);
-
-    if (!response.ok) {
-      throw new Error((data && data.message) || `HTTP error! status: ${response.status}`);
-    }
-
+    
+    const data = await response.json();
+    console.log('✅ API Response:', {
+      url,
+      status: response.status,
+      success: data.success,
+      data: data.data
+    });
+    
     return data;
   } catch (error) {
-    const errorMsg = error.message || 'Network error occurred';
-    console.error('🚨 Request failed:', errorMsg);
-
-    if (errorMsg.includes('Network request failed') || errorMsg.includes('aborted')) {
-      throw new Error(
-        'Cannot reach server. Make sure:\n' +
-        '1. Backend is running (node server.js)\n' +
-        '2. Ngrok is running and the URL in config/api.js is current\n' +
-        '3. Your device and PC are on the same network or ngrok tunnel is active'
-      );
-    }
-
-    throw new Error(errorMsg);
+    console.error('❌ API Request failed:', error);
+    throw error;
   }
 };
 

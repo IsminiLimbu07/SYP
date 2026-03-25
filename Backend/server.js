@@ -2,7 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { sql } from './config/db.js';
-
+import path from 'path';
 // Import routes
 import authRoutes from './routes/authRoutes.js';
 import bloodRoutes from './routes/bloodRoutes.js';
@@ -10,7 +10,7 @@ import donorRoutes from './routes/donorRoutes.js';
 import communityRoutes from './routes/communityRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import campaignRoutes from './routes/campaignRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js'; // ← NEW
+import paymentRoutes from './routes/paymentRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
@@ -25,8 +25,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ── Serve static files (images, uploads) ─────────────────────────────────────
-app.use('/uploads', express.static('uploads'));
-app.use(express.static('public')); // Optional: for other static files
+app.use('/uploads',express.static(path.join(process.cwd(), 'uploads')));
+app.use(express.static('public'));
 
 const PORT = process.env.PORT || 9000;
 
@@ -54,10 +54,12 @@ async function initDB() {
     `;
 
     // ── Table 2: User Profiles ──────────────────────────────────────────────
+    // FIX: user_id is now UNIQUE so that ON CONFLICT (user_id) works correctly
+    //      and city/blood_group are never silently dropped on registration.
     await sql`
       CREATE TABLE IF NOT EXISTS user_profiles (
         profile_id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+        user_id INTEGER UNIQUE REFERENCES users(user_id) ON DELETE CASCADE,
         date_of_birth DATE,
         gender VARCHAR(20),
         profile_picture_url TEXT,
@@ -79,6 +81,18 @@ async function initDB() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    // ── Migration: add UNIQUE constraint on user_id if the table already exists
+    //    without it (safe to run repeatedly — ignored if constraint already exists).
+    try {
+      await sql`
+        ALTER TABLE user_profiles
+        ADD CONSTRAINT user_profiles_user_id_unique UNIQUE (user_id)
+      `;
+      console.log('✅ UNIQUE constraint added to user_profiles.user_id');
+    } catch (e) {
+      // Constraint already exists — this is fine, nothing to do
+    }
 
     // Volunteer status columns (safe to run multiple times)
     await sql`
@@ -205,8 +219,6 @@ async function initDB() {
     `;
 
     // ── Table 10: Campaigns ─────────────────────────────────────────────────
-    // Single source of truth — replaces the old "fundraising_campaigns" table.
-    // status flow: pending → active (approved) or rejected
     await sql`
       CREATE TABLE IF NOT EXISTS campaigns (
         campaign_id SERIAL PRIMARY KEY,
@@ -311,7 +323,7 @@ app.get('/', (req, res) => {
       community:     '/api/community',
       chat:          '/api/chat',
       campaigns:     '/api/campaigns',
-      payment:       '/api/payment', // ← NEW
+      payment:       '/api/payment',
       notifications: '/api/notifications',
       admin:         '/api/admin',
       volunteer:     '/api/volunteer',
@@ -326,12 +338,11 @@ app.use('/api/donors',        donorRoutes);
 app.use('/api/community',     communityRoutes);
 app.use('/api/chat',          chatRoutes);
 app.use('/api/campaigns',     campaignRoutes);
-app.use('/api/payment',       paymentRoutes); // ← NEW
+app.use('/api/payment',       paymentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin',         adminRoutes);
 app.use('/api/volunteer',     volunteerRoutes);
 app.use('/api/upload',        uploadRoutes);
-app.use('/api/payment',       paymentRoutes);
 
 // ============================================
 // START SERVER
@@ -346,5 +357,11 @@ initDB().then(() => {
     console.log(`👥 Volunteers:     http://localhost:${PORT}/api/volunteer`);
   });
 });
-
+// server.js - Place at the bottom
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found on this server.`
+  });
+});
 export default app;

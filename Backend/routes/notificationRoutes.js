@@ -3,6 +3,8 @@ import {
   sendNotification,
   getNotifications,
   deleteNotification,
+  markNotificationsRead,
+  getUnreadCount,
 } from '../controllers/notificationController.js';
 import { authenticateToken, isAdmin } from '../middleware/authMiddleware.js';
 
@@ -58,5 +60,7 @@ router.post('/', authenticateToken, isAdmin, withNormalisedTimestamps, sendNotif
 
 // DELETE /api/notifications/:id    — delete a notification
 router.delete('/:id', authenticateToken, isAdmin, deleteNotification);
+router.get('/unread-count', authenticateToken, getUnreadCount);
+router.put('/mark-read', authenticateToken, markNotificationsRead);
 
 export default router;
