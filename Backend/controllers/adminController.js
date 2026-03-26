@@ -320,6 +320,15 @@ export const approveVolunteer = async (req, res) => {
             WHERE user_id = ${userId}
         `;
 
+        // Ensure users table volunteer flag is synced for create-event permission checks
+        await sql`
+            UPDATE users
+            SET is_volunteer = true,
+                volunteer_since = NOW(),
+                updated_at = NOW()
+            WHERE user_id = ${userId}
+        `;
+
         // Get user info for response
         const user = await sql`
             SELECT full_name, email FROM users WHERE user_id = ${userId}
@@ -416,6 +425,14 @@ export const revokeVolunteerStatus = async (req, res) => {
                 volunteer_approved_at = NULL,
                 volunteer_approved_by = NULL,
                 volunteer_rejection_reason = ${reason || 'Status revoked by admin'}
+            WHERE user_id = ${userId}
+        `;
+
+        // Mark user record as non-volunteer too
+        await sql`
+            UPDATE users
+            SET is_volunteer = false,
+                updated_at = NOW()
             WHERE user_id = ${userId}
         `;
 

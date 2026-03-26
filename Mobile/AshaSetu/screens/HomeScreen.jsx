@@ -17,7 +17,7 @@ import { apiConfig } from '../config/api';
 import { Animated } from 'react-native';
 
 const HomeScreen = ({ navigation }) => {
-  const { user, token } = useContext(AuthContext);
+  const { user, token, unreadCount, setUnreadCount } = useContext(AuthContext);
 
   // Safety check - should not happen if navigation is set up correctly
   if (!user || !token) {
@@ -34,7 +34,6 @@ const HomeScreen = ({ navigation }) => {
   const [loading, setLoading]             = useState(true);
   const [nearbyEvents, setNearbyEvents]   = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
   const [fadeAnim] = useState(new Animated.Value(1));
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -185,15 +184,16 @@ const HomeScreen = ({ navigation }) => {
   // ── Notification unread count ───────────────────────────────────────────────
   const fetchUnreadCount = async () => {
     try {
-      const response = await fetch(`${apiConfig.BASE_URL}/notifications`, {
+      const response = await fetch(`${apiConfig.BASE_URL}/notifications/unread-count`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
       if (data.success) {
-        setUnreadCount(data.data?.length || 0);
+        setUnreadCount(data.count || 0);
       }
-    } catch {
-      // silent fail — badge simply stays at 0
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+      // silent fail — badge simply stays at previous value
     }
   };
 
@@ -216,10 +216,14 @@ const HomeScreen = ({ navigation }) => {
       const buildUrl = (p) =>
         `${apiConfig.BASE_URL}/community/events?${new URLSearchParams(p)}`;
 
-      const resp = await fetch(buildUrl(baseParams), {
+      const url = buildUrl(baseParams);
+      console.log('[HomeScreen] fetchNearbyEvents ->', url);
+
+      const resp = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await resp.json();
+      console.log('[HomeScreen] fetchNearbyEvents response:', resp.status, data);
       let events = data.success ? data.data || [] : [];
 
       if (city && events.length < 5) {
@@ -234,6 +238,7 @@ const HomeScreen = ({ navigation }) => {
           events = [...events, ...extra].slice(0, 5);
         }
       }
+      console.log('[HomeScreen] nearbyEvents:', events.length);
       setNearbyEvents(events);
     } catch (error) {
       console.error('Error fetching nearby events:', error);

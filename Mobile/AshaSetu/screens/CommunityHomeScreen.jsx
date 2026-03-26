@@ -120,11 +120,16 @@ export default function CommunityHomeScreen({ navigation }) {
       const data = await response.json();
       console.log('[Community] my-status:', data);
       if (data.success && data.data) {
-        setIsVolunteer(data.data.is_volunteer || false);
+        const serverStatus = data.data.volunteer_status || (data.data.is_volunteer ? 'approved' : 'none');
+        setVolunteerStatus(serverStatus);
+
+        const isVol = data.data.is_volunteer || serverStatus === 'approved';
+        setIsVolunteer(isVol);
       }
     } catch (error) {
       console.error('[Community] fetchMyStatus error:', error.message);
       setIsVolunteer(user?.is_volunteer || false);
+      setVolunteerStatus(user?.is_volunteer ? 'approved' : 'none');
     }
   };
 
@@ -261,6 +266,9 @@ export default function CommunityHomeScreen({ navigation }) {
           />
         }
         showsVerticalScrollIndicator={false}
+        scrollEnabled={true}
+        bounces={true}
+        keyboardShouldPersistTaps="handled"
       >
 
         {/* ── Chatroom Card ── */}
@@ -633,7 +641,7 @@ const styles = StyleSheet.create({
   registerBtnDisabled:   { backgroundColor: '#BDBDBD' },
   registerBtnOrganizer:  { backgroundColor: '#FFF3E0', borderWidth: 1, borderColor: '#8B0000' },
   registerBtnText:       { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-  bottomSpacing:         { height: 20 },
+  bottomSpacing:         { height: 100 },
   bottomNav: {
     flexDirection: 'row', backgroundColor: '#F2F2F2',
     paddingVertical: 8, paddingHorizontal: 20,

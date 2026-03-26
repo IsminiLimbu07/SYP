@@ -48,6 +48,11 @@ async function initDB() {
         is_admin BOOLEAN DEFAULT false,
         is_verified BOOLEAN DEFAULT false,
         is_active BOOLEAN DEFAULT true,
+        is_volunteer BOOLEAN DEFAULT false,
+        volunteer_since TIMESTAMP,
+        events_organized INTEGER DEFAULT 0,
+        total_donations INTEGER DEFAULT 0,
+        expo_push_token VARCHAR(255),
         verification_token VARCHAR(255),
         verification_token_expires TIMESTAMP,
         reset_otp VARCHAR(6),
@@ -77,24 +82,20 @@ async function initDB() {
         willing_to_volunteer BOOLEAN DEFAULT false,
         volunteer_skills TEXT[],
         volunteer_availability VARCHAR(20) DEFAULT 'available',
+        volunteer_status VARCHAR(20) DEFAULT 'none' 
+          CHECK (volunteer_status IN ('none', 'pending', 'approved', 'rejected')),
+        volunteer_requested_at TIMESTAMP,
+        volunteer_approved_at TIMESTAMP,
+        volunteer_approved_by INTEGER REFERENCES users(user_id),
+        volunteer_rejection_reason TEXT,
         emergency_contact_name VARCHAR(255),
         emergency_contact_phone VARCHAR(20),
         medical_conditions TEXT,
         allergies TEXT,
+        push_token TEXT,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
-
-    // Volunteer status columns
-    await sql`
-      ALTER TABLE user_profiles 
-      ADD COLUMN IF NOT EXISTS volunteer_status VARCHAR(20) DEFAULT 'none' 
-        CHECK (volunteer_status IN ('none', 'pending', 'approved', 'rejected'))
-    `;
-    await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS volunteer_requested_at TIMESTAMP`;
-    await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS volunteer_approved_at TIMESTAMP`;
-    await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS volunteer_approved_by INTEGER REFERENCES users(user_id)`;
-    await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS volunteer_rejection_reason TEXT`;
 
     // ── Table 3: Volunteer Applications ────────────────────────────────────
     await sql`
@@ -170,11 +171,12 @@ async function initDB() {
     await sql`CREATE INDEX IF NOT EXISTS idx_donation_responses_donor ON donation_responses(donor_id)`;
 
     // ── Table 6: Donation Events ─────────────────────────────────────────────
-    await sql`DROP TABLE IF EXISTS donation_events CASCADE`;
+    // ✅ FIXED: Changed from DROP TABLE to CREATE TABLE IF NOT EXISTS
+    // This preserves existing events across server restarts
     await sql`
-      CREATE TABLE donation_events (
+      CREATE TABLE IF NOT EXISTS donation_events (
         event_id SERIAL PRIMARY KEY,
-        organizer_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+        organizer_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
         title VARCHAR(255) NOT NULL,
         description TEXT,
         event_date DATE NOT NULL,
@@ -192,6 +194,10 @@ async function initDB() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    await sql`CREATE INDEX IF NOT EXISTS idx_donation_events_status ON donation_events(status)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_donation_events_organizer ON donation_events(organizer_id)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_donation_events_city ON donation_events(city)`;
 
     // ── Table 7: Event Participants ──────────────────────────────────────────
     await sql`
@@ -297,6 +303,7 @@ async function initDB() {
     console.log('✅ Deadline-based blood request system ready!');
     console.log('✅ Volunteer application system ready!');
     console.log('✅ Campaign approval system ready!');
+    console.log('✅ Event creation & management system ready!');
 
   } catch (error) {
     console.error('❌ Error initializing database:', error);

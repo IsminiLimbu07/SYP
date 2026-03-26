@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  TextInput,
   ScrollView,
-  RefreshControl,
   Alert,
-  Linking,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,106 +14,59 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { AuthContext } from '../context/AuthContext';
 import { apiConfig } from '../config/api';
 
-export default function MyDonationResponsesScreen({ navigation }) {
-  const { token } = useContext(AuthContext);
-  const [responses, setResponses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState('all'); // all, pending, confirmed, cancelled
+export default function RespondToRequestScreen({ route, navigation }) {
+  const { request } = route.params;
+  const { token, user } = useContext(AuthContext);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadMyResponses();
-  }, []);
+  const handleSubmitResponse = async () => {
+    if (!message.trim()) {
+      Alert.alert('Message Required', 'Please enter a message to the requester');
+      return;
+    }
 
-  const loadMyResponses = async () => {
+    setLoading(true);
     try {
-      const response = await fetch(`${apiConfig.BASE_URL}/blood/my-responses`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await fetch(`${apiConfig.BASE_URL}/blood/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          request_id: request.request_id,
+          message: message.trim(),
+        }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        setResponses(data.data);
+        Alert.alert(
+          'Response Submitted',
+          'Your donation offer has been sent to the requester. They will contact you if you are selected.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                }
+                // Optionally navigate to "My Responses" screen
+                // navigation.navigate('MyDonationResponses');
+              },
+            },
+          ]
+        );
+      } else {
+        throw new Error(data.message || 'Failed to submit response');
       }
     } catch (error) {
-      console.error('Error loading responses:', error);
-      Alert.alert('Error', 'Failed to load your donation responses');
+      console.error('Error submitting response:', error);
+      Alert.alert('Error', error.message || 'Failed to submit your response. Please try again.');
     } finally {
       setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    loadMyResponses();
-  };
-
-  const handleCancelResponse = async (donationId, patientName) => {
-    Alert.alert(
-      'Cancel Response',
-      `Are you sure you want to cancel your donation offer for ${patientName}?`,
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await fetch(
-                `${apiConfig.BASE_URL}/blood/respond/${donationId}`,
-                {
-                  method: 'DELETE',
-                  headers: { Authorization: `Bearer ${token}` },
-                }
-              );
-
-              const data = await response.json();
-
-              if (data.success) {
-                Alert.alert('Cancelled', 'Your donation response has been cancelled.');
-                loadMyResponses();
-              } else {
-                throw new Error(data.message);
-              }
-            } catch (error) {
-              Alert.alert('Error', error.message || 'Failed to cancel response');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleCallRequester = (phone, name) => {
-    Alert.alert('Call Requester', `Call ${name}?\n\nPhone: ${phone}`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Call', onPress: () => Linking.openURL(`tel:${phone}`) },
-    ]);
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'confirmed':
-        return '#4CAF50';
-      case 'cancelled':
-        return '#999';
-      case 'pending':
-      default:
-        return '#FF9800';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'confirmed':
-        return 'checkmark-circle';
-      case 'cancelled':
-        return 'close-circle';
-      case 'pending':
-      default:
-        return 'time';
     }
   };
 
@@ -131,237 +83,187 @@ export default function MyDonationResponsesScreen({ navigation }) {
     }
   };
 
-  const FilterButton = ({ label, value }) => (
-    <TouchableOpacity
-      style={[styles.filterBtn, filter === value && styles.filterBtnActive]}
-      onPress={() => setFilter(value)}
-    >
-      <Text style={[styles.filterBtnText, filter === value && styles.filterBtnTextActive]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8B0000" />
-        <Text style={styles.loadingText}>Loading your responses...</Text>
-      </View>
-    );
-  }
-
-  const filteredResponses = responses.filter((r) => {
-    if (filter === 'all') return true;
-    return r.status === filter;
-  });
-
   return (
     <SafeAreaView style={styles.container}>
- 
+      {/* Header */}
 
-      {/* Filter */}
-      <View style={styles.filterContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <FilterButton label="All" value="all" />
-          <FilterButton label="Pending" value="pending" />
-          <FilterButton label="Confirmed" value="confirmed" />
-          <FilterButton label="Cancelled" value="cancelled" />
-        </ScrollView>
-      </View>
-
-      {/* Stats Summary */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{responses.length}</Text>
-          <Text style={styles.statLabel}>Total Offers</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: '#FF9800' }]}>
-            {responses.filter((r) => r.status === 'pending').length}
-          </Text>
-          <Text style={styles.statLabel}>Pending</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: '#4CAF50' }]}>
-            {responses.filter((r) => r.status === 'confirmed').length}
-          </Text>
-          <Text style={styles.statLabel}>Confirmed</Text>
-        </View>
-      </View>
-
-      {/* Responses List */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={['#8B0000']} />
-        }
         showsVerticalScrollIndicator={false}
       >
-        {filteredResponses.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="hand-heart-outline" size={64} color="#DDD" />
-            <Text style={styles.emptyText}>
-              {filter === 'all'
-                ? 'No donation offers yet'
-                : `No ${filter} responses`}
-            </Text>
-            <Text style={styles.emptySubtext}>
-              {filter === 'all'
-                ? 'Browse blood requests and offer to help'
-                : 'Your responses will appear here'}
-            </Text>
-            {filter === 'all' && (
-              <TouchableOpacity
-                style={styles.browseBtn}
-                onPress={() => navigation.navigate('BloodRequestList')}
-              >
-                <Text style={styles.browseBtnText}>Browse Requests</Text>
-              </TouchableOpacity>
-            )}
+        {/* Info Banner */}
+        <View style={styles.infoBanner}>
+          <MaterialCommunityIcons name="information" size={20} color="#8B0000" />
+          <Text style={styles.infoBannerText}>
+            You are offering to donate blood. The requester will review your response and may
+            contact you.
+          </Text>
+        </View>
+
+        {/* Request Summary */}
+        <View style={styles.requestSummary}>
+          <View
+            style={[
+              styles.urgencyBadge,
+              { backgroundColor: getUrgencyColor(request.urgency_level) },
+            ]}
+          >
+            <Text style={styles.urgencyText}>{request.urgency_level.toUpperCase()}</Text>
           </View>
-        ) : (
-          filteredResponses.map((response) => (
-            <View key={response.donation_id} style={styles.responseCard}>
-              {/* Status Banner */}
-              <View
-                style={[
-                  styles.statusBanner,
-                  { backgroundColor: getStatusColor(response.status) },
-                ]}
-              >
-                <Ionicons name={getStatusIcon(response.status)} size={16} color="#fff" />
-                <Text style={styles.statusBannerText}>
-                  {response.status.toUpperCase()}
-                </Text>
-                {response.status === 'confirmed' && (
-                  <>
-                    <View style={styles.statusDivider} />
-                    <MaterialCommunityIcons name="party-popper" size={16} color="#fff" />
-                    <Text style={styles.statusBannerText}>You're helping save a life!</Text>
-                  </>
-                )}
-              </View>
 
-              {/* Request Info */}
-              <View style={styles.requestInfo}>
-                <View style={styles.requestHeader}>
-                  <View style={styles.requestDetails}>
-                    <Text style={styles.patientName}>{response.patient_name}</Text>
-                    <View style={styles.hospitalRow}>
-                      <Ionicons name="medical" size={16} color="#666" />
-                      <Text style={styles.hospitalText}>{response.hospital_name}</Text>
-                    </View>
-                    <View style={styles.locationRow}>
-                      <Ionicons name="location" size={16} color="#666" />
-                      <Text style={styles.locationText}>{response.hospital_city}</Text>
-                    </View>
-                  </View>
+          <View style={styles.bloodTypeCircle}>
+            <Text style={styles.bloodTypeText}>{request.blood_group}</Text>
+            <Text style={styles.unitsText}>{request.units_needed} pint(s)</Text>
+          </View>
 
-                  <View style={styles.bloodInfoCard}>
-                    <View
-                      style={[
-                        styles.urgencyDot,
-                        { backgroundColor: getUrgencyColor(response.urgency_level) },
-                      ]}
-                    />
-                    <Text style={styles.bloodGroupLarge}>{response.blood_group}</Text>
-                    <Text style={styles.unitsNeeded}>{response.units_needed} pints</Text>
-                  </View>
-                </View>
+          <Text style={styles.patientName}>{request.patient_name}</Text>
 
-                <View style={styles.dateRow}>
-                  <Ionicons name="calendar-outline" size={16} color="#666" />
-                  <Text style={styles.dateText}>
-                    Needed by: {new Date(response.needed_by_date).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="medical" size={18} color="#666" />
+            <Text style={styles.detailText}>{request.hospital_name}</Text>
+          </View>
 
-              {/* Your Message */}
-              {response.message && (
-                <View style={styles.yourMessageBox}>
-                  <Text style={styles.yourMessageLabel}>Your message:</Text>
-                  <Text style={styles.yourMessageText}>{response.message}</Text>
-                </View>
-              )}
+          <View style={styles.detailRow}>
+            <Ionicons name="location" size={18} color="#666" />
+            <Text style={styles.detailText}>{request.hospital_city}</Text>
+          </View>
 
-              {/* Response Timestamp */}
-              <View style={styles.timestampRow}>
-                <Ionicons name="time-outline" size={14} color="#999" />
-                <Text style={styles.timestampText}>
-                  Responded on {new Date(response.created_at).toLocaleDateString()} at{' '}
-                  {new Date(response.created_at).toLocaleTimeString()}
-                </Text>
-              </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="calendar" size={18} color="#666" />
+            <Text style={styles.detailText}>
+              Needed by: {new Date(request.needed_by_date).toLocaleDateString()}
+            </Text>
+          </View>
 
-              {/* Action Buttons */}
-              <View style={styles.actionButtons}>
-                {response.status === 'confirmed' && (
-                  <TouchableOpacity
-                    style={styles.callRequesterBtn}
-                    onPress={() =>
-                      handleCallRequester(response.requester_phone, response.requester_name)
-                    }
-                  >
-                    <Ionicons name="call" size={18} color="#fff" />
-                    <Text style={styles.callRequesterText}>Call Requester</Text>
-                  </TouchableOpacity>
-                )}
-
-                {response.status === 'pending' && (
-                  <>
-                    <TouchableOpacity
-                      style={styles.contactBtn}
-                      onPress={() =>
-                        handleCallRequester(response.requester_phone, response.requester_name)
-                      }
-                    >
-                      <Ionicons name="call-outline" size={18} color="#8B0000" />
-                      <Text style={styles.contactBtnText}>Contact</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.cancelResponseBtn}
-                      onPress={() =>
-                        handleCancelResponse(response.donation_id, response.patient_name)
-                      }
-                    >
-                      <Ionicons name="close-outline" size={18} color="#F44336" />
-                      <Text style={styles.cancelResponseText}>Cancel Offer</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-
-                {response.status === 'cancelled' && (
-                  <View style={styles.cancelledNote}>
-                    <Ionicons name="information-circle" size={16} color="#999" />
-                    <Text style={styles.cancelledText}>This offer has been cancelled</Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Request Status */}
-              {response.request_status !== 'active' && (
-                <View style={styles.requestStatusBanner}>
-                  <Ionicons
-                    name={
-                      response.request_status === 'fulfilled'
-                        ? 'checkmark-circle'
-                        : 'close-circle'
-                    }
-                    size={16}
-                    color={response.request_status === 'fulfilled' ? '#4CAF50' : '#999'}
-                  />
-                  <Text style={styles.requestStatusText}>
-                    Request {response.request_status}
-                  </Text>
-                </View>
-              )}
+          {request.description && (
+            <View style={styles.descriptionBox}>
+              <Text style={styles.descriptionLabel}>Case Details:</Text>
+              <Text style={styles.descriptionText}>{request.description}</Text>
             </View>
-          ))
-        )}
+          )}
+        </View>
+
+        {/* Your Blood Type Check */}
+        <View style={styles.bloodCheckSection}>
+          <Text style={styles.sectionTitle}>Your Blood Profile</Text>
+          <View style={styles.bloodCheckCard}>
+            <View style={styles.bloodCheckRow}>
+              <Text style={styles.bloodCheckLabel}>Your Blood Type:</Text>
+              <Text style={styles.bloodCheckValue}>
+                {user?.profile?.blood_group || 'Not specified'}
+              </Text>
+            </View>
+
+            {user?.profile?.blood_group && user.profile.blood_group !== request.blood_group && (
+              <View style={styles.warningBox}>
+                <MaterialCommunityIcons name="alert" size={20} color="#FF9800" />
+                <Text style={styles.warningText}>
+                  Note: Your blood type ({user.profile.blood_group}) doesn't match the requested type (
+                  {request.blood_group}). Please confirm you can donate.
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.bloodCheckRow}>
+              <Text style={styles.bloodCheckLabel}>Last Donation:</Text>
+              <Text style={styles.bloodCheckValue}>
+                {user?.profile?.last_donation_date
+                  ? new Date(user.profile.last_donation_date).toLocaleDateString()
+                  : 'Never'}
+              </Text>
+            </View>
+
+            <View style={styles.infoBox}>
+              <Ionicons name="information-circle" size={18} color="#2196F3" />
+              <Text style={styles.infoText}>
+                You should wait at least 3 months between blood donations
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Message Input */}
+        <View style={styles.messageSection}>
+          <Text style={styles.sectionTitle}>Your Message to Requester</Text>
+          <Text style={styles.messageHint}>
+            Introduce yourself and confirm your availability
+          </Text>
+
+          <TextInput
+            style={styles.messageInput}
+            placeholder="Example: Hello, I have O+ blood and I'm available to donate. I can come to the hospital tomorrow morning. Please contact me at your earliest convenience."
+            placeholderTextColor="#999"
+            value={message}
+            onChangeText={setMessage}
+            multiline
+            numberOfLines={6}
+            textAlignVertical="top"
+          />
+
+          <Text style={styles.charCount}>{message.length} characters</Text>
+        </View>
+
+        {/* Quick Message Templates */}
+        <View style={styles.templatesSection}>
+          <Text style={styles.templateLabel}>Quick Templates:</Text>
+          <TouchableOpacity
+            style={styles.templateBtn}
+            onPress={() =>
+              setMessage(
+                `Hello, I am willing to donate ${request.blood_group} blood. I am available and can reach the hospital soon. Please contact me.`
+              )
+            }
+          >
+            <Text style={styles.templateText}>Standard Offer</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.templateBtn}
+            onPress={() =>
+              setMessage(
+                `I have donated blood before and am ready to help. I can come to ${request.hospital_name} at your earliest convenience. My blood type is ${user?.blood_group || request.blood_group}.`
+              )
+            }
+          >
+            <Text style={styles.templateText}>Experienced Donor</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.templateBtn}
+            onPress={() =>
+              setMessage(
+                `I am available for immediate donation. Please call me to coordinate. I understand this is ${request.urgency_level}.`
+              )
+            }
+          >
+            <Text style={styles.templateText}>Urgent Response</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Contact Info Reminder */}
+        <View style={styles.contactReminder}>
+          <MaterialCommunityIcons name="phone-check" size={20} color="#4CAF50" />
+          <Text style={styles.contactReminderText}>
+            The requester will contact you at: {user?.phone_number}
+          </Text>
+        </View>
+
+        {/* Submit Button */}
+        <TouchableOpacity
+          style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+          onPress={handleSubmitResponse}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="hand-heart" size={24} color="#fff" />
+              <Text style={styles.submitBtnText}>Submit Donation Offer</Text>
+            </>
+          )}
+        </TouchableOpacity>
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
@@ -374,69 +276,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-  },
-  filterContainer: {
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  filterBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
-    marginRight: 10,
-  },
-  filterBtnActive: {
+  header: {
     backgroundColor: '#8B0000',
-  },
-  filterBtnText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666',
-  },
-  filterBtnTextActive: {
-    color: '#fff',
-  },
-  statsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 16,
+    justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#8B0000',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
   },
   scrollView: {
     flex: 1,
@@ -444,244 +295,260 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
+  infoBanner: {
+    backgroundColor: '#E3F2FD',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#999',
-    marginTop: 16,
+  infoBannerText: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 13,
+    color: '#1976D2',
+    lineHeight: 18,
   },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#BBB',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  browseBtn: {
-    backgroundColor: '#8B0000',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 20,
-  },
-  browseBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  responseCard: {
+  requestSummary: {
     backgroundColor: '#fff',
     borderRadius: 12,
+    padding: 20,
     marginBottom: 16,
-    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
   },
-  statusBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 6,
+  urgencyBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginBottom: 16,
   },
-  statusBannerText: {
+  urgencyText: {
     color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
     letterSpacing: 0.5,
   },
-  statusDivider: {
-    width: 1,
-    height: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    marginHorizontal: 8,
+  bloodTypeCircle: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#8B0000',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  requestInfo: {
-    padding: 16,
+  bloodTypeText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
   },
-  requestHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  requestDetails: {
-    flex: 1,
+  unitsText: {
+    fontSize: 11,
+    color: '#fff',
+    marginTop: 2,
   },
   patientName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  hospitalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    gap: 6,
-  },
-  hospitalText: {
+  detailText: {
     fontSize: 14,
     color: '#666',
+    marginLeft: 8,
     flex: 1,
   },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  locationText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  bloodInfoCard: {
-    alignItems: 'center',
-    backgroundColor: '#F9F9F9',
-    borderRadius: 10,
+  descriptionBox: {
+    marginTop: 12,
     padding: 12,
-    minWidth: 80,
-  },
-  urgencyDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginBottom: 6,
-  },
-  bloodGroupLarge: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#8B0000',
-    marginBottom: 2,
-  },
-  unitsNeeded: {
-    fontSize: 12,
-    color: '#666',
-  },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  dateText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  yourMessageBox: {
     backgroundColor: '#F9F9F9',
-    padding: 12,
-    marginHorizontal: 16,
     borderRadius: 8,
     borderLeftWidth: 3,
     borderLeftColor: '#8B0000',
   },
-  yourMessageLabel: {
-    fontSize: 12,
+  descriptionLabel: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#666',
-    marginBottom: 4,
+    color: '#333',
+    marginBottom: 6,
   },
-  yourMessageText: {
+  descriptionText: {
     fontSize: 14,
     color: '#555',
     lineHeight: 20,
   },
-  timestampRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 6,
+  bloodCheckSection: {
+    marginBottom: 16,
   },
-  timestampText: {
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  bloodCheckCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  bloodCheckRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  bloodCheckLabel: {
+    fontSize: 15,
+    color: '#666',
+  },
+  bloodCheckValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  warningBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF9E5',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 10,
+  },
+  warningText: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 13,
+    color: '#E65100',
+    lineHeight: 18,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#E3F2FD',
+    padding: 10,
+    borderRadius: 6,
+    marginTop: 10,
+  },
+  infoText: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 12,
+    color: '#1976D2',
+    lineHeight: 16,
+  },
+  messageSection: {
+    marginBottom: 16,
+  },
+  messageHint: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+  },
+  messageInput: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    color: '#333',
+    minHeight: 150,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  charCount: {
     fontSize: 12,
     color: '#999',
+    textAlign: 'right',
+    marginTop: 6,
   },
-  actionButtons: {
-    flexDirection: 'row',
+  templatesSection: {
+    marginBottom: 16,
+  },
+  templateLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 10,
+  },
+  templateBtn: {
+    backgroundColor: '#F5F5F5',
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  templateText: {
+    fontSize: 14,
+    color: '#8B0000',
+    fontWeight: '500',
+  },
+  contactReminder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  contactReminderText: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#2E7D32',
+    fontWeight: '500',
+  },
+  submitBtn: {
+    backgroundColor: '#8B0000',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
     gap: 10,
   },
-  callRequesterBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4CAF50',
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 6,
+  submitBtnDisabled: {
+    backgroundColor: '#B8B8B8',
   },
-  callRequesterText: {
+  submitBtnText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  contactBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#8B0000',
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 6,
-  },
-  contactBtnText: {
-    color: '#8B0000',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  cancelResponseBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFEBEE',
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 6,
-  },
-  cancelResponseText: {
-    color: '#F44336',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  cancelledNote: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  cancelledText: {
-    fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
-  },
-  requestStatusBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F5F5F5',
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    gap: 6,
-  },
-  requestStatusText: {
-    fontSize: 13,
-    color: '#666',
-    textTransform: 'capitalize',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   bottomSpacing: {
-    height: 20,
+    height: 30,
   },
 });

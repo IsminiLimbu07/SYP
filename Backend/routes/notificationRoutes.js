@@ -1,9 +1,11 @@
-// routes/notificationRoutes.js
+// Backend/routes/notificationRoutes.js
 import express from 'express';
 import {
   sendNotification,
   getNotifications,
   deleteNotification,
+  markNotificationsRead,
+  getUnreadCount,
   registerExpoToken,
 } from '../controllers/notificationController.js';
 import { authenticateToken, isAdmin } from '../middleware/authMiddleware.js';
@@ -43,18 +45,31 @@ const withNormalisedTimestamps = (req, res, next) => {
   next();
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// IMPORTANT: specific sub-routes MUST be declared before the /:id wildcard
+// otherwise Express matches "unread-count" and "mark-read" as IDs.
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── Any authenticated user ────────────────────────────────────────────────────
-// GET  /api/notifications          — fetch notifications relevant to this user
+
+// GET  /api/notifications              — fetch notifications for this user
 router.get('/', authenticateToken, withNormalisedTimestamps, getNotifications);
 
-// POST /api/notifications/register-token — register Expo push token
+// GET  /api/notifications/unread-count — number of unread notifications
+router.get('/unread-count', authenticateToken, getUnreadCount);
+
+// PUT  /api/notifications/mark-read    — mark all visible notifications as read
+router.put('/mark-read', authenticateToken, markNotificationsRead);
+
+// POST /api/notifications/register-token — save / refresh device Expo push token
 router.post('/register-token', authenticateToken, registerExpoToken);
 
 // ── Admin only ────────────────────────────────────────────────────────────────
-// POST /api/notifications          — send a new notification
+
+// POST   /api/notifications            — broadcast a new notification
 router.post('/', authenticateToken, isAdmin, withNormalisedTimestamps, sendNotification);
 
-// DELETE /api/notifications/:id    — delete a notification
+// DELETE /api/notifications/:id        — remove a notification
 router.delete('/:id', authenticateToken, isAdmin, deleteNotification);
 
 export default router;

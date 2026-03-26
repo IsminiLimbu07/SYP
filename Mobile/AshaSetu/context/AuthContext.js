@@ -10,6 +10,7 @@ export const AuthProvider = ({ children }) => {
   const [token,           setToken]           = useState(null);
   const [loading,         setLoading]         = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [unreadCount,     setUnreadCount]     = useState(0);
 
   // ── Restore session from AsyncStorage on app start ──────────────────────────
   useEffect(() => {
@@ -166,6 +167,8 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated,
     isAdmin,
+    unreadCount,
+    setUnreadCount,
     login,
     logout,
     updateUser,

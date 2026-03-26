@@ -216,110 +216,114 @@ export default function CommunityChatroomScreen({ navigation, route }) {
   const grouped = groupByDate();
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-    >
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 75}
+        enabled
+      >
+        <View style={styles.container}>
+          {/* ── Info Banner ── */}
+          <View style={styles.infoBanner}>
+          <MaterialCommunityIcons name="information-outline" size={16} color="#8B0000" />
+          <Text style={styles.infoBannerText}>
+            This is a safe community space. Be respectful and helpful.
+          </Text>
+        </View>
 
-      {/* ── Info Banner ── */}
-      <View style={styles.infoBanner}>
-        <MaterialCommunityIcons name="information" size={16} color="#8B0000" />
-        <Text style={styles.infoBannerText}>
-          Global community chat — be respectful and supportive 🩸
-        </Text>
-      </View>
-
-      {/* ── Messages Area ── */}
-      <View style={styles.keyboardView}>
+        {/* ── Messages ScrollView ── */}
         <ScrollView
           ref={scrollViewRef}
           style={styles.messagesContainer}
           contentContainerStyle={messages.length === 0 ? styles.emptyContainer : styles.messagesContent}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
           {messages.length === 0 ? (
-            <View style={{ alignItems: 'center' }}>
+            <>
               <MaterialCommunityIcons name="chat-outline" size={48} color="#CCC" />
               <Text style={styles.emptyText}>No messages yet</Text>
-              <Text style={styles.emptySubtext}>Be the first to break the ice! 💬</Text>
-            </View>
+              <Text style={styles.emptySubtext}>Start the conversation!</Text>
+            </>
           ) : (
-            Object.entries(grouped).map(([date, msgs]) => (
-              <View key={date}>
-                {/* Date Divider */}
-                <View style={styles.dateDivider}>
-                  <View style={styles.dateLine} />
-                  <Text style={styles.dateDividerText}>{formatDate(msgs[0].created_at)}</Text>
-                  <View style={styles.dateLine} />
-                </View>
+            Object.entries(grouped).map(([date, msgs]) =>
+              msgs.length > 0 ? (
+                <View key={date}>
+                  {/* Date Divider */}
+                  <View style={styles.dateDivider}>
+                    <View style={styles.dateLine} />
+                    <Text style={styles.dateDividerText}>{formatDate(msgs[0].created_at)}</Text>
+                    <View style={styles.dateLine} />
+                  </View>
 
-                {/* Messages for this date */}
-                {msgs.map((message, idx) => {
-                  const prevMsg = idx > 0 ? msgs[idx - 1] : null;
-                  const isOwn = message.sender_id === user.user_id;
-                  const showAvatar = !prevMsg || prevMsg.sender_id !== message.sender_id;
+                  {/* Messages for this date */}
+                  {msgs.map((message, idx) => {
+                    const prevMsg = idx > 0 ? msgs[idx - 1] : null;
+                    const isOwn = message.sender_id === user.user_id;
+                    const showAvatar = !prevMsg || prevMsg.sender_id !== message.sender_id;
 
-                  return (
-                    <TouchableOpacity
-                      key={message.message_id}
-                      style={[
-                        styles.messageWrapper,
-                        isOwn ? styles.ownWrapper : styles.otherWrapper,
-                      ]}
-                      onLongPress={() => {
-                        if (isOwn && !message.is_temp) handleDeleteMessage(message.message_id);
-                      }}
-                      activeOpacity={0.9}
-                    >
-                      {/* Avatar (other users only) */}
-                      {!isOwn && showAvatar ? (
-                        <View style={styles.avatarContainer}>
-                          <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>
-                              {(message.sender_name || '?').charAt(0).toUpperCase()}
-                            </Text>
+                    return (
+                      <TouchableOpacity
+                        key={message.message_id}
+                        style={[
+                          styles.messageWrapper,
+                          isOwn ? styles.ownWrapper : styles.otherWrapper,
+                        ]}
+                        onLongPress={() => {
+                          if (isOwn && !message.is_temp) handleDeleteMessage(message.message_id);
+                        }}
+                        activeOpacity={0.9}
+                      >
+                        {/* Avatar (other users only) */}
+                        {!isOwn && showAvatar ? (
+                          <View style={styles.avatarContainer}>
+                            <View style={styles.avatar}>
+                              <Text style={styles.avatarText}>
+                                {(message.sender_name || '?').charAt(0).toUpperCase()}
+                              </Text>
+                            </View>
                           </View>
+                        ) : !isOwn ? (
+                          <View style={styles.avatarSpacer} />
+                        ) : null}
+
+                        <View style={[styles.bubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
+                          {/* Sender name + volunteer badge */}
+                          {!isOwn && showAvatar && (
+                            <View style={styles.senderHeader}>
+                              <Text style={styles.senderName}>{message.sender_name}</Text>
+                              {message.sender_is_volunteer && (
+                                <View style={styles.volBadge}>
+                                  <MaterialCommunityIcons name="shield-star" size={11} color="#fff" />
+                                  <Text style={styles.volBadgeText}>Volunteer</Text>
+                                </View>
+                              )}
+                            </View>
+                          )}
+
+                          <Text
+                            style={[
+                              styles.messageText,
+                              isOwn ? styles.ownText : styles.otherText,
+                              message.is_temp && styles.tempText,
+                            ]}
+                          >
+                            {message.message_text}
+                          </Text>
+
+                          <Text style={[styles.timeText, isOwn ? styles.ownTime : styles.otherTime]}>
+                            {formatTime(message.created_at)}
+                            {message.is_temp ? ' · Sending…' : ''}
+                          </Text>
                         </View>
-                      ) : !isOwn ? (
-                        <View style={styles.avatarSpacer} />
-                      ) : null}
-
-                      <View style={[styles.bubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
-                        {/* Sender name + volunteer badge */}
-                        {!isOwn && showAvatar && (
-                          <View style={styles.senderHeader}>
-                            <Text style={styles.senderName}>{message.sender_name}</Text>
-                            {message.sender_is_volunteer && (
-                              <View style={styles.volBadge}>
-                                <MaterialCommunityIcons name="shield-star" size={11} color="#fff" />
-                                <Text style={styles.volBadgeText}>Volunteer</Text>
-                              </View>
-                            )}
-                          </View>
-                        )}
-
-                        <Text
-                          style={[
-                            styles.messageText,
-                            isOwn ? styles.ownText : styles.otherText,
-                            message.is_temp && styles.tempText,
-                          ]}
-                        >
-                          {message.message_text}
-                        </Text>
-
-                        <Text style={[styles.timeText, isOwn ? styles.ownTime : styles.otherTime]}>
-                          {formatTime(message.created_at)}
-                          {message.is_temp ? ' · Sending…' : ''}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            ))
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : null
+            )
           )}
         </ScrollView>
 
@@ -353,8 +357,8 @@ export default function CommunityChatroomScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
-    </KeyboardAvoidingView>
   );
 }
 

@@ -8,6 +8,8 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { applyAsVolunteer } from '../api/volunteer';
@@ -65,8 +67,12 @@ const VolunteerApplicationScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.content}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
+      <ScrollView style={styles.content} scrollEnabled={true} bounces={false}>
         {/* Info Card */}
         <View style={styles.infoCard}>
           <Ionicons name="information-circle" size={24} color="#8B0000" />
@@ -141,7 +147,7 @@ const VolunteerApplicationScreen = ({ navigation }) => {
           )}
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

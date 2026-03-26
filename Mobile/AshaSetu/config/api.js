@@ -1,4 +1,5 @@
-// Previously used ngrok tunnel URL (kept here for reference):
+// IMPORTANT: Update this with your current ngrok URL from: ngrok http 9000
+// The URL changes each time ngrok restarts!
 const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
 
 // Local IP configuration (commented out while using ngrok)
@@ -23,6 +24,7 @@ export const apiConfig = {
       CHANGE_PASSWORD:         `${API_BASE_URL}/auth/change-password`,
       SEND_VERIFICATION_EMAIL: `${API_BASE_URL}/auth/send-verification-email`,
       REFRESH_TOKEN:           `${API_BASE_URL}/auth/refresh-token`,
+      UPLOAD_PROFILE_PICTURE:  `${API_BASE_URL}/auth/upload-profile-picture`,
     },
 
     BLOOD: {

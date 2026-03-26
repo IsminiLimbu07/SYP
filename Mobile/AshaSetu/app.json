@@ -39,14 +39,15 @@
         }
       ],
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      "expo-build-properties"
     ],
     "experiments": {
       "reactCompiler": true
     },
     "extra": {
       "eas": {
-        "projectId": "586f7e57-b403-4973-89a7-e34290095ca2"
+        "projectId": "20b2a077-c3a6-4a31-8741-34bb55f265a0"
       }
     }
   }

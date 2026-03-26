@@ -47,7 +47,19 @@ const upload = multer({
 
 // ==================== UPLOAD EVENT IMAGE ====================
 
-router.post('/event-image', authenticateToken, upload.single('image'), async (req, res) => {
+router.post('/event-image', authenticateToken, (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      // Handle multer errors and return JSON instead of HTML
+      console.error('Multer error:', err.message);
+      return res.status(400).json({
+        success: false,
+        message: err.message || 'File upload failed',
+      });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({

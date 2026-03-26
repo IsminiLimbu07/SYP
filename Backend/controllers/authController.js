@@ -156,11 +156,19 @@ export const login = async (req, res) => {
 // ─── Get current user profile ─────────────────────────────────────────────────
 export const getProfile = async (req, res) => {
   try {
+    if (!req.user || !req.user.user_id) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
     const users = await sql`
       SELECT user_id, full_name, email, phone_number, is_admin,
-             is_verified, is_active, created_at
+             is_verified, is_active, created_at, updated_at,
+             total_donations, volunteer_since, verification_token,
+             verification_token_expires, events_organized,
+             reset_otp, reset_otp_expiry, reset_otp_verified, expo_push_token
       FROM users WHERE user_id = ${req.user.user_id}
     `;
+    
     if (users.length === 0) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -169,21 +177,21 @@ export const getProfile = async (req, res) => {
       SELECT * FROM user_profiles WHERE user_id = ${req.user.user_id}
     `;
 
-        res.status(200).json({
-            success: true,
-            data: {
-                ...users[0],
-                profile: profile[0] || null
-            }
-        });
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...users[0],
+        profile: profile[0] || null
+      }
+    });
 
-    } catch (error) {
-        console.error("Error getting profile:", error);
-        res.status(500).json({ 
-            success: false,
-            message: "Internal server error" 
-        });
-    }
+  } catch (error) {
+    console.error('❌ Error getting profile:', error.message);
+    return res.status(500).json({ 
+      success: false,
+      message: 'Failed to fetch profile: ' + error.message
+    });
+  }
 };
 
 // ─── Update profile ───────────────────────────────────────────────────────────
@@ -691,5 +699,48 @@ export const resetPassword = async (req, res) => {
   } catch (error) {
     console.error('Error in resetPassword:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
+// ─── Upload Profile Picture ───────────────────────────────────────────────────
+export const uploadProfilePicture = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+      });
+    }
+
+    const userId = req.user.user_id;
+    const fileUrl = `/uploads/profiles/${req.file.filename}`;
+
+    // Update the profile_picture_url in the database
+    await sql`
+      UPDATE user_profiles
+      SET profile_picture_url = ${fileUrl},
+          updated_at = NOW()
+      WHERE user_id = ${userId}
+    `;
+
+    // Get updated profile
+    const profile = await sql`
+      SELECT * FROM user_profiles WHERE user_id = ${userId}
+    `;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile picture uploaded successfully',
+      data: {
+        profile_picture_url: fileUrl,
+        profile: profile[0],
+      },
+    });
+  } catch (error) {
+    console.error('❌ Error uploading profile picture:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to upload profile picture: ' + error.message,
+    });
   }
 };

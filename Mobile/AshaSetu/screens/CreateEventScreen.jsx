@@ -100,6 +100,8 @@ export default function CreateEventScreen({ route, navigation }) {
         type: type,
       });
 
+      console.log('📤 [CreateEvent] Uploading image:', filename, 'Type:', type);
+
       const response = await fetch(`${apiConfig.BASE_URL}/upload/event-image`, {
         method: 'POST',
         headers: {
@@ -108,15 +110,30 @@ export default function CreateEventScreen({ route, navigation }) {
         body: formData,
       });
 
+      if (!response.ok) {
+        console.error('[CreateEvent] Upload response not OK:', response.status);
+        let errorMsg = 'Image upload failed';
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.message || errorMsg;
+        } catch (e) {
+          // If response is not JSON, show status
+          errorMsg = `Image upload failed (${response.status})`;
+        }
+        throw new Error(errorMsg);
+      }
+
       const data = await response.json();
       
-      if (data.success) {
-        return data.imageUrl;
-      } else {
-        throw new Error('Image upload failed');
+      if (!data.success) {
+        throw new Error(data.message || 'Image upload failed');
       }
+
+      console.log('✅ [CreateEvent] Image uploaded:', data.imageUrl);
+      return data.imageUrl;
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('❌ [CreateEvent] Error uploading image:', error.message);
+      Alert.alert('Upload Failed', error.message || 'Could not upload image. Creating event without image.');
       // Return a placeholder or null - we'll create event without image if upload fails
       return null;
     }

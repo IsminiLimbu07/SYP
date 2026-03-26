@@ -89,17 +89,36 @@ export default function CreateCampaignScreen({ navigation }) {
 
       formData.append('image', { uri: imageUri, name: filename, type });
 
+      console.log('📤 [Campaign] Uploading image:', filename, 'Type:', type);
+
       const response = await fetch(`${apiConfig.BASE_URL}/upload/event-image`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
+
+      if (!response.ok) {
+        console.error('[Campaign] Upload response not OK:', response.status);
+        let errorMsg = 'Image upload failed';
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.message || errorMsg;
+        } catch (e) {
+          errorMsg = `Image upload failed (${response.status})`;
+        }
+        throw new Error(errorMsg);
+      }
+
       const data = await response.json();
-      if (data.success) return data.imageUrl;
-      console.warn('[Campaign] Image upload failed:', data.message);
-      return null;
+      if (!data.success) {
+        throw new Error(data.message || 'Image upload failed');
+      }
+      
+      console.log('✅ [Campaign] Image uploaded:', data.imageUrl);
+      return data.imageUrl;
     } catch (error) {
-      console.error('[Campaign] Image upload error:', error);
+      console.error('❌ [Campaign] Image upload error:', error.message);
+      Alert.alert('Upload Failed', error.message || 'Could not upload image.');
       return null;
     } finally {
       setUploadingImage(false);
