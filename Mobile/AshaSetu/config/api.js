@@ -1,14 +1,11 @@
-// IMPORTANT: Update this with your current ngrok URL from: ngrok http 9000
-// The URL changes each time ngrok restarts!
-const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
+// ✅ PRODUCTION: Using Render deployment URL
+const API_BASE_URL = 'https://syp-cuwh.onrender.com/api';
+const SERVER_BASE_URL = 'https://syp-cuwh.onrender.com';
 
-// Local IP configuration (commented out while using ngrok)
-// const API_BASE_URL = 'http://192.168.100.63:9000/api';
-// const SERVER_BASE_URL = 'http://192.168.100.63:9000';
-
-// Use ngrok for tunneling during development
-const API_BASE_URL = `${NGROK_URL}/api`;
-const SERVER_BASE_URL = NGROK_URL;
+// Local development URL (commented out - use Render for production)
+// const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
+// const API_BASE_URL = `${NGROK_URL}/api`;
+// const SERVER_BASE_URL = NGROK_URL;
 
 // ─── API Configuration ────────────────────────────────────────────────────────
 export const apiConfig = {

@@ -43,8 +43,8 @@ router.post('/initiate', authenticateToken, async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        return_url: `${process.env.NGROK_URL}/api/payment/callback`,
-        website_url: process.env.NGROK_URL,
+        return_url: `https://syp-cuwh.onrender.com/api/payment/callback`,
+        website_url: `https://syp-cuwh.onrender.com`,
         amount: amountInPaisa,
         purchase_order_id: `DONATION_${donationId}_${Date.now()}`,
         purchase_order_name: `Donation for ${campaign[0].patient_name}`,

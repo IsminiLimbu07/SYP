@@ -432,22 +432,42 @@ router.post('/events/:eventId/register', authenticateToken, async (req, res) => 
         }
 
         // Register for event
-        await sql`
-            INSERT INTO event_participants (event_id, user_id, registration_status)
-            VALUES (${eventId}, ${userId}, 'registered')
-        `;
+        try {
+            await sql`
+                INSERT INTO event_participants (event_id, user_id, registration_status)
+                VALUES (${eventId}, ${userId}, 'registered')
+            `;
 
-        console.log(`✅ User ${userId} registered for event ${eventId}`);
+            console.log(`✅ User ${userId} registered for event ${eventId}`);
 
-        return res.status(201).json({
-            success: true,
-            message: 'Successfully registered for event'
-        });
+            return res.status(201).json({
+                success: true,
+                message: 'Successfully registered for event'
+            });
+        } catch (insertError) {
+            console.error('❌ Database error inserting registration:', {
+                error: insertError.message,
+                eventId,
+                userId,
+                code: insertError.code
+            });
+            
+            // Check if table exists
+            if (insertError.message.includes('event_participants') || insertError.code === '42P1') {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Database table not properly initialized'
+                });
+            }
+            
+            throw insertError;
+        }
     } catch (error) {
-        console.error('Error registering for event:', error);
+        console.error('❌ Error registering for event:', error.message);
         return res.status(500).json({
             success: false,
-            message: 'Failed to register for event'
+            message: 'Failed to register for event',
+            error: error.message.substring(0, 100)
         });
     }
 });
