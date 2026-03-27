@@ -351,10 +351,12 @@ export const sendVerificationEmail = async (req, res) => {
             WHERE user_id = ${user.user_id}
         `;
 
-        // Use ngrok URL for verification link (commented local IP for now)
-        const NGROK_URL = process.env.NGROK_URL || 'https://malachi-inconvertible-lita.ngrok-free.dev';
-        // const BASE_URL = process.env.BASE_URL || 'http://192.168.1.4:9000';
-        const verificationUrl = `${NGROK_URL}/api/auth/verify-email?token=${token}&userId=${user.user_id}`;
+        // Use Render URL for verification link in production
+        const BASE_URL = process.env.NODE_ENV === 'production' 
+          ? 'https://syp-cuwh.onrender.com'
+          : (process.env.NGROK_URL || 'http://localhost:9000');
+        
+        const verificationUrl = `${BASE_URL}/api/auth/verify-email?token=${token}&userId=${user.user_id}`;
         
         console.log('✅ Verification URL being sent:', verificationUrl);
 
@@ -365,39 +367,47 @@ export const sendVerificationEmail = async (req, res) => {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
             },
+            connectionTimeout: 5000,
+            socketTimeout: 5000,
         });
 
-        await transporter.sendMail({
-            from: `"AshaSetu" <${process.env.EMAIL_USER}>`,
-            to: user.email,
-            subject: 'Verify your email — AshaSetu',
-            html: `
-                <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
-                    <div style="background:#8B0000;padding:28px;text-align:center">
-                        <h1 style="color:#fff;margin:0;font-size:22px">Verify Your Email</h1>
-                    </div>
-                    <div style="padding:32px">
-                        <p style="color:#333;font-size:15px">Hi <strong>${user.full_name}</strong>,</p>
-                        <p style="color:#555;font-size:14px;line-height:1.6">
-                            Click the button below to verify your email address. This link expires in <strong>24 hours</strong>.
-                        </p>
-                        <div style="text-align:center;margin:28px 0">
-                            <a href="${verificationUrl}"
-                               style="background:#8B0000;color:#fff;text-decoration:none;padding:13px 32px;border-radius:8px;font-size:15px;font-weight:bold;display:inline-block">
-                                Verify Email
-                            </a>
+        try {
+            await transporter.sendMail({
+                from: `"AshaSetu" <${process.env.EMAIL_USER}>`,
+                to: user.email,
+                subject: 'Verify your email — AshaSetu',
+                html: `
+                    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+                        <div style="background:#8B0000;padding:28px;text-align:center">
+                            <h1 style="color:#fff;margin:0;font-size:22px">Verify Your Email</h1>
                         </div>
-                        <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
-                            Or copy this link:<br>
-                            <span style="color:#0066cc;word-break:break-all">${verificationUrl}</span>
-                        </p>
-                        <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
-                            If you didn't request this, you can safely ignore this email.
-                        </p>
+                        <div style="padding:32px">
+                            <p style="color:#333;font-size:15px">Hi <strong>${user.full_name}</strong>,</p>
+                            <p style="color:#555;font-size:14px;line-height:1.6">
+                                Click the button below to verify your email address. This link expires in <strong>24 hours</strong>.
+                            </p>
+                            <div style="text-align:center;margin:28px 0">
+                                <a href="${verificationUrl}"
+                                   style="background:#8B0000;color:#fff;text-decoration:none;padding:13px 32px;border-radius:8px;font-size:15px;font-weight:bold;display:inline-block">
+                                    Verify Email
+                                </a>
+                            </div>
+                            <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
+                                Or copy this link:<br>
+                                <span style="color:#0066cc;word-break:break-all">${verificationUrl}</span>
+                            </p>
+                            <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
+                                If you didn't request this, you can safely ignore this email.
+                            </p>
+                        </div>
                     </div>
-                </div>
-            `,
-        });
+                `,
+            });
+            console.log('✅ Verification email sent successfully to:', user.email);
+        } catch (emailError) {
+            console.error('❌ Failed to send verification email:', emailError.message);
+            throw new Error('Email sending failed. Please check your email configuration.');
+        }
 
     res.status(200).json({ success: true, message: 'Verification email sent successfully' });
   } catch (error) {
@@ -552,39 +562,49 @@ export const forgotPassword = async (req, res) => {
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+      auth: { 
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_PASS 
+      },
+      connectionTimeout: 5000,
+      socketTimeout: 5000,
     });
 
     console.log('📧 Attempting to send email to:', user.email);
 
-    const info = await transporter.sendMail({
-      from: `"AshaSetu" <${process.env.EMAIL_USER}>`,
-      to: user.email,
-      subject: 'Your Password Reset Code — AshaSetu',
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
-          <div style="background:#8B0000;padding:28px;text-align:center">
-            <h1 style="color:#fff;margin:0;font-size:22px">Password Reset</h1>
-          </div>
-          <div style="padding:32px">
-            <p style="color:#333;font-size:15px">Hi <strong>${user.full_name}</strong>,</p>
-            <p style="color:#555;font-size:14px;line-height:1.6">
-              Use the code below to reset your password. This code expires in <strong>15 minutes</strong>.
-            </p>
-            <div style="text-align:center;margin:28px 0">
-              <div style="display:inline-block;background:#f5f5f5;border-radius:12px;padding:20px 40px;border:2px dashed #8B0000">
-                <span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#8B0000">${otp}</span>
-              </div>
+    try {
+      const info = await transporter.sendMail({
+        from: `"AshaSetu" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: 'Your Password Reset Code — AshaSetu',
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
+            <div style="background:#8B0000;padding:28px;text-align:center">
+              <h1 style="color:#fff;margin:0;font-size:22px">Password Reset</h1>
             </div>
-            <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
-              If you did not request this, please ignore this email.
-            </p>
+            <div style="padding:32px">
+              <p style="color:#333;font-size:15px">Hi <strong>${user.full_name}</strong>,</p>
+              <p style="color:#555;font-size:14px;line-height:1.6">
+                Use the code below to reset your password. This code expires in <strong>15 minutes</strong>.
+              </p>
+              <div style="text-align:center;margin:28px 0">
+                <div style="display:inline-block;background:#f5f5f5;border-radius:12px;padding:20px 40px;border:2px dashed #8B0000">
+                  <span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#8B0000">${otp}</span>
+                </div>
+              </div>
+              <p style="color:#999;font-size:12px;text-align:center;margin-top:20px">
+                If you did not request this, please ignore this email.
+              </p>
+            </div>
           </div>
-        </div>
-      `,
-    });
+        `,
+      });
 
-    console.log('✅ Email sent! MessageId:', info.messageId);
+      console.log('✅ Email sent! MessageId:', info.messageId);
+    } catch (emailError) {
+      console.error('❌ Failed to send password reset email:', emailError.message);
+      throw new Error('Email sending failed. Check configuration and try again.');
+    }
 
     res.status(200).json({
       success: true,
