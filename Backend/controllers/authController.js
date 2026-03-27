@@ -351,10 +351,8 @@ export const sendVerificationEmail = async (req, res) => {
             WHERE user_id = ${user.user_id}
         `;
 
-        // Use Render URL for verification link in production
-        const BASE_URL = process.env.NODE_ENV === 'production' 
-          ? 'https://syp-cuwh.onrender.com'
-          : (process.env.NGROK_URL || 'http://localhost:9000');
+        // Use Render URL for verification link
+        const BASE_URL = 'https://syp-cuwh.onrender.com';
         
         const verificationUrl = `${BASE_URL}/api/auth/verify-email?token=${token}&userId=${user.user_id}`;
         

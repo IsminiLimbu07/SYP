@@ -366,7 +366,7 @@ app.use('/api/upload',        uploadRoutes);
 initDB().then(() => {
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`🚀 Server running on port ${PORT}`);
-        console.log(`📲 Ngrok URL:  https://tularaemic-electroneutral-ozella.ngrok-free.dev`); 
+        console.log(`🌐 Production URL: https://syp-cuwh.onrender.com`); 
         console.log(`📍 API Base URL: http://0.0.0.0:${PORT}`);
         console.log(`🏥 Health check: http://localhost:${PORT}/`);
         console.log(`✨ Community features enabled!`);

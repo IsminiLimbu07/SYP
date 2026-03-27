@@ -2,11 +2,6 @@
 const API_BASE_URL = 'https://syp-cuwh.onrender.com/api';
 const SERVER_BASE_URL = 'https://syp-cuwh.onrender.com';
 
-// Local development URL (commented out - use Render for production)
-// const NGROK_URL = 'https://tularaemic-electroneutral-ozella.ngrok-free.dev';
-// const API_BASE_URL = `${NGROK_URL}/api`;
-// const SERVER_BASE_URL = NGROK_URL;
-
 // ─── API Configuration ────────────────────────────────────────────────────────
 export const apiConfig = {
   BASE_URL: API_BASE_URL,
@@ -146,8 +141,8 @@ export const makeRequest = async (url, options = {}) => {
       throw new Error(
         'Cannot reach server. Make sure:\n' +
         '1. Backend is running (node server.js)\n' +
-        '2. Ngrok is running and the URL in config/api.js is current\n' +
-        '3. Your device and PC are on the same network or ngrok tunnel is active'
+        '2. Ensure Render backend is running at https://syp-cuwh.onrender.com\n' +
+        '3. Check your network connection and API configuration'
       );
     }
 
