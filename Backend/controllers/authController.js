@@ -3,8 +3,10 @@ dotenv.config();
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { sql } from '../config/db.js';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const signToken = (user) => {
   return jwt.sign(
@@ -358,20 +360,10 @@ export const sendVerificationEmail = async (req, res) => {
         
         console.log('✅ Verification URL being sent:', verificationUrl);
 
-        // Send email via nodemailer
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-            connectionTimeout: 5000,
-            socketTimeout: 5000,
-        });
-
+        // Send email via Resend
         try {
-            await transporter.sendMail({
-                from: `"AshaSetu" <${process.env.EMAIL_USER}>`,
+            await resend.emails.send({
+                from: 'noreply@ashasetu.com',
                 to: user.email,
                 subject: 'Verify your email — AshaSetu',
                 html: `
@@ -558,21 +550,11 @@ export const forgotPassword = async (req, res) => {
 
     console.log('✅ OTP saved to database');
 
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { 
-        user: process.env.EMAIL_USER, 
-        pass: process.env.EMAIL_PASS 
-      },
-      connectionTimeout: 5000,
-      socketTimeout: 5000,
-    });
-
     console.log('📧 Attempting to send email to:', user.email);
 
     try {
-      const info = await transporter.sendMail({
-        from: `"AshaSetu" <${process.env.EMAIL_USER}>`,
+      await resend.emails.send({
+        from: 'noreply@ashasetu.com',
         to: user.email,
         subject: 'Your Password Reset Code — AshaSetu',
         html: `
@@ -598,7 +580,7 @@ export const forgotPassword = async (req, res) => {
         `,
       });
 
-      console.log('✅ Email sent! MessageId:', info.messageId);
+      console.log('✅ Email sent via Resend!');
     } catch (emailError) {
       console.error('❌ Failed to send password reset email:', emailError.message);
       throw new Error('Email sending failed. Check configuration and try again.');
