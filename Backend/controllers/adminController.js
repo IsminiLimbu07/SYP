@@ -53,7 +53,7 @@ export const getAllUsers = async (req, res) => {
 // Get single user
 export const getUserById = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const { id: userId } = req.params;
 
         const users = await sql`
             SELECT 
@@ -99,7 +99,7 @@ export const getUserById = async (req, res) => {
 // Delete user
 export const deleteUser = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const { id: userId } = req.params;
 
         const user = await sql`
             SELECT user_id, full_name, is_admin FROM users WHERE user_id = ${userId}
@@ -137,7 +137,7 @@ export const deleteUser = async (req, res) => {
 // Toggle user active status
 export const toggleUserStatus = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const { id: userId } = req.params;
         const { is_active } = req.body;
 
         const user = await sql`

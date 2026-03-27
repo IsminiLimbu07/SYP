@@ -342,7 +342,7 @@ router.delete('/events/:eventId', authenticateToken, async (req, res) => {
             });
         }
 
-        if (event.organizer_id !== userId) {
+        if (event.organizer_id !== userId && !req.user.is_admin) {
             return res.status(403).json({
                 success: false,
                 message: 'You are not authorized to delete this event'
@@ -350,14 +350,20 @@ router.delete('/events/:eventId', authenticateToken, async (req, res) => {
         }
 
         await sql`
+            DELETE FROM event_participants WHERE event_id = ${eventId}
+        `;
+        await sql`
+            DELETE FROM event_ratings WHERE event_id = ${eventId}
+        `;
+        await sql`
             DELETE FROM donation_events WHERE event_id = ${eventId}
         `;
 
-        // Decrement events_organized counter
+        // Decrement events_organized counter for the original organizer only
         await sql`
             UPDATE users 
             SET events_organized = GREATEST(events_organized - 1, 0)
-            WHERE user_id = ${userId}
+            WHERE user_id = ${event.organizer_id}
         `;
 
         console.log(`🗑️ Event deleted: ID=${eventId}`);
