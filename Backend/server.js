@@ -212,6 +212,17 @@ async function initDB() {
       )
     `;
 
+    // ── Add missing column if it doesn't exist ──────────────────────────────
+    try {
+      await sql`
+        ALTER TABLE event_participants
+        ADD COLUMN IF NOT EXISTS registration_status VARCHAR(20) DEFAULT 'registered'
+      `;
+      console.log('✅ Event participants table verified/migrated');
+    } catch (migrationError) {
+      console.log('ℹ️ Migration note:', migrationError.message);
+    }
+
     // ── Table 8: Event Ratings ───────────────────────────────────────────────
     await sql`
       CREATE TABLE IF NOT EXISTS event_ratings (
