@@ -20,6 +20,20 @@ AshaSetu is a mobile application designed to connect people in Nepal through ess
 
 ---
 
+## ScreenShots
+<img width="480" height="1144" alt="1776264354146" src="https://github.com/user-attachments/assets/fa14e29c-a6d4-4343-9702-b13c36dbf87b" />
+
+<img width="444" height="1536" alt="1776264354403" src="https://github.com/user-attachments/assets/a9483e83-0feb-4750-ad16-7fa017a1abcb" />
+
+<img width="442" height="1536" alt="1776264359709" src="https://github.com/user-attachments/assets/f5e0d22d-c985-4eff-819a-c88e3fd1e3af" />
+
+<img width="480" height="1440" alt="1776264357523" src="https://github.com/user-attachments/assets/ce53e255-e3fb-465a-8ea4-eff5c60dad22" />
+
+<img width="480" height="1040" alt="1776264356114" src="https://github.com/user-attachments/assets/da35a997-e4c1-4b67-9bae-c4da6159b7d2" />
+
+<img width="480" height="1040" alt="1776264356248" src="https://github.com/user-attachments/assets/b1808388-91e8-4635-a75b-82dd34e31aaa" />
+
+
 ## 🛠️ Tech Stack
 
 ### Frontend
